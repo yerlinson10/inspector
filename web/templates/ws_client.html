@@ -1,0 +1,127 @@
+{{define "content"}}
+<h2 class="text-2xl font-bold mb-6">WebSocket Client</h2>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Connection -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">WebSocket URL</label>
+                <input type="text" id="ws-url" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="ws://example.com/ws">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="connectWS()" id="btn-connect" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded font-medium transition">Connect</button>
+                <button onclick="disconnectWS()" id="btn-disconnect" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-medium transition hidden">Disconnect</button>
+                <span id="ws-status" class="flex items-center px-3 text-sm text-gray-400">Disconnected</span>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Message</label>
+                <textarea id="ws-message" rows="4" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"action": "ping"}'></textarea>
+            </div>
+            <button onclick="sendMessage()" id="btn-send" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-medium transition w-full" disabled>Send Message</button>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Messages</h3>
+            <button onclick="clearMessages()" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">Clear</button>
+        </div>
+        <div id="ws-messages" class="space-y-2 max-h-[500px] overflow-y-auto font-mono text-sm">
+            <p class="text-gray-500">Connect to a WebSocket server to start.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+let ws = null;
+
+function connectWS() {
+    const url = document.getElementById('ws-url').value.trim();
+    if (!url) {
+        window.appAlert('Enter a WebSocket URL', 'Missing URL');
+        return;
+    }
+
+    // Connect through our proxy
+    const proxyUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/send/ws-proxy?url=${encodeURIComponent(url)}`;
+    
+    try {
+        ws = new WebSocket(proxyUrl);
+    } catch(e) {
+        addMessage('error', 'Failed to connect: ' + e.message);
+        return;
+    }
+
+    ws.onopen = function() {
+        document.getElementById('ws-status').textContent = 'Connected';
+        document.getElementById('ws-status').className = 'flex items-center px-3 text-sm text-emerald-400';
+        document.getElementById('btn-connect').classList.add('hidden');
+        document.getElementById('btn-disconnect').classList.remove('hidden');
+        document.getElementById('btn-send').disabled = false;
+        addMessage('system', 'Connected to ' + url);
+    };
+
+    ws.onmessage = function(event) {
+        addMessage('received', event.data);
+    };
+
+    ws.onclose = function() {
+        document.getElementById('ws-status').textContent = 'Disconnected';
+        document.getElementById('ws-status').className = 'flex items-center px-3 text-sm text-gray-400';
+        document.getElementById('btn-connect').classList.remove('hidden');
+        document.getElementById('btn-disconnect').classList.add('hidden');
+        document.getElementById('btn-send').disabled = true;
+        addMessage('system', 'Connection closed');
+        ws = null;
+    };
+
+    ws.onerror = function() {
+        addMessage('error', 'WebSocket error occurred');
+    };
+}
+
+function disconnectWS() {
+    if (ws) ws.close();
+}
+
+function sendMessage() {
+    if (!ws) return;
+    const msg = document.getElementById('ws-message').value;
+    if (!msg) return;
+    ws.send(msg);
+    addMessage('sent', msg);
+    document.getElementById('ws-message').value = '';
+}
+
+function addMessage(type, text) {
+    const container = document.getElementById('ws-messages');
+    if (container.querySelector('.text-gray-500')) container.innerHTML = '';
+
+    const colors = {
+        sent: 'text-blue-300 border-blue-800',
+        received: 'text-emerald-300 border-emerald-800',
+        system: 'text-gray-400 border-gray-700',
+        error: 'text-red-300 border-red-800'
+    };
+    const labels = { sent: '→ SENT', received: '← RECV', system: '● SYS', error: '✕ ERR' };
+
+    const div = document.createElement('div');
+    div.className = `border-l-2 pl-3 py-1 ${colors[type]} fade-in`;
+    div.innerHTML = `<span class="text-xs opacity-60">${labels[type]} ${new Date().toLocaleTimeString()}</span><pre class="mt-1 whitespace-pre-wrap break-all">${escapeHtml(text)}</pre>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function clearMessages() {
+    document.getElementById('ws-messages').innerHTML = '<p class="text-gray-500">Messages cleared.</p>';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{{end}}

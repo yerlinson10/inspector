@@ -1,0 +1,73 @@
+{{define "content"}}
+<div class="mb-6">
+    <a href="/send/history" class="text-gray-400 hover:text-emerald-400">← Back to History</a>
+</div>
+
+{{with .request}}
+<div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <h2 class="text-2xl font-bold">Sent Request #{{.ID}}</h2>
+            <div class="flex gap-3 mt-2">
+                <span class="font-mono text-gray-300">{{.Method}}</span>
+                <span class="text-blue-400">{{.URL}}</span>
+            </div>
+        </div>
+        <div class="flex gap-3 text-sm">
+            {{if .Error}}
+            <span class="bg-red-900/50 text-red-300 px-2 py-1 rounded">Error</span>
+            {{else}}
+            <span class="{{if lt .ResponseStatus 300}}bg-emerald-900/50 text-emerald-300{{else if lt .ResponseStatus 400}}bg-yellow-900/50 text-yellow-300{{else}}bg-red-900/50 text-red-300{{end}} px-2 py-1 rounded">{{.ResponseStatus}}</span>
+            {{end}}
+            <span class="text-gray-400 py-1">{{.DurationMs}}ms</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Request Side -->
+        <div>
+            <h3 class="text-lg font-semibold mb-3 text-blue-300">Request</h3>
+            {{if .Headers}}
+            <div class="mb-4">
+                <h4 class="text-sm text-gray-400 mb-1">Headers</h4>
+                <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto">{{.Headers}}</pre>
+            </div>
+            {{end}}
+            {{if .Body}}
+            <div>
+                <h4 class="text-sm text-gray-400 mb-1">Body</h4>
+                <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto max-h-64">{{.Body}}</pre>
+            </div>
+            {{end}}
+        </div>
+
+        <!-- Response Side -->
+        <div>
+            <h3 class="text-lg font-semibold mb-3 text-emerald-300">Response</h3>
+            {{if .Error}}
+            <div class="bg-red-900/30 border border-red-700 rounded p-3 text-red-200 text-sm">
+                {{.Error}}
+            </div>
+            {{else}}
+            {{if .ResponseHeaders}}
+            <div class="mb-4">
+                <h4 class="text-sm text-gray-400 mb-1">Headers</h4>
+                <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto max-h-48">{{.ResponseHeaders}}</pre>
+            </div>
+            {{end}}
+            {{if .ResponseBody}}
+            <div>
+                <h4 class="text-sm text-gray-400 mb-1">Body</h4>
+                <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto max-h-96">{{.ResponseBody}}</pre>
+            </div>
+            {{end}}
+            {{end}}
+        </div>
+    </div>
+
+    <div class="mt-4 text-sm text-gray-500">
+        Sent at: {{.CreatedAt.Format "2006-01-02 15:04:05"}}
+    </div>
+</div>
+{{end}}
+{{end}}

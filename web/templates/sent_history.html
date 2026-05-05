@@ -1,0 +1,139 @@
+{{define "content"}}
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold">Sent Requests History</h2>
+    <span id="sent-total" class="text-gray-400">{{.total}} total</span>
+</div>
+
+<div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-800 text-gray-400">
+            <tr>
+                <th class="px-4 py-3 text-left">#</th>
+                <th class="px-4 py-3 text-left">Type</th>
+                <th class="px-4 py-3 text-left">Method</th>
+                <th class="px-4 py-3 text-left">URL</th>
+                <th class="px-4 py-3 text-left">Status</th>
+                <th class="px-4 py-3 text-left">Duration</th>
+                <th class="px-4 py-3 text-left">Time</th>
+                <th class="px-4 py-3 text-left"></th>
+            </tr>
+        </thead>
+        <tbody id="sent-body" class="divide-y divide-gray-700">
+            {{if .requests}}
+            {{range .requests}}
+            <tr class="hover:bg-gray-800/50 transition">
+                <td class="px-4 py-3">{{.ID}}</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded text-xs font-medium {{if eq .Type "websocket"}}bg-purple-900/50 text-purple-300{{else if eq .Type "webhook"}}bg-yellow-900/50 text-yellow-300{{else}}bg-blue-900/50 text-blue-300{{end}}">{{.Type}}</span>
+                </td>
+                <td class="px-4 py-3 font-mono">{{.Method}}</td>
+                <td class="px-4 py-3 text-gray-300 truncate max-w-xs">{{.URL}}</td>
+                <td class="px-4 py-3">
+                    {{if .Error}}
+                    <span class="text-red-400">Error</span>
+                    {{else}}
+                    <span class="{{if lt .ResponseStatus 300}}text-emerald-400{{else if lt .ResponseStatus 400}}text-yellow-400{{else}}text-red-400{{end}}">{{.ResponseStatus}}</span>
+                    {{end}}
+                </td>
+                <td class="px-4 py-3 text-gray-400">{{.DurationMs}}ms</td>
+                <td class="px-4 py-3 text-gray-400">{{.CreatedAt.Format "01-02 15:04:05"}}</td>
+                <td class="px-4 py-3"><a href="/send/history/{{.ID}}" class="text-emerald-400 hover:underline">Detail →</a></td>
+            </tr>
+            {{end}}
+            {{else}}
+            <tr id="sent-empty-row">
+                <td colspan="8" class="px-4 py-8 text-center text-gray-400">No sent requests yet. <a href="/send" class="text-emerald-400 hover:underline">Send one</a></td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+{{if gt .totalPages 1}}
+<div class="flex justify-center gap-2 mt-6">
+    {{if gt .page 1}}
+    <a href="/send/history?page={{subtract .page 1}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">← Prev</a>
+    {{end}}
+    <span class="px-3 py-1 text-gray-400">Page {{.page}} of {{.totalPages}}</span>
+    {{if lt .page .totalPages}}
+    <a href="/send/history?page={{add .page 1}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">Next →</a>
+    {{end}}
+</div>
+{{end}}
+
+<script>
+(() => {
+    const currentPage = Number('{{.page}}');
+    const totalEl = document.getElementById('sent-total');
+    const bodyEl = document.getElementById('sent-body');
+
+    function typeBadgeClass(type) {
+        if (type === 'websocket') return 'bg-purple-900/50 text-purple-300';
+        if (type === 'webhook') return 'bg-yellow-900/50 text-yellow-300';
+        return 'bg-blue-900/50 text-blue-300';
+    }
+
+    function statusHtml(evt) {
+        if (evt.error) return '<span class="text-red-400">Error</span>';
+        const st = Number(evt.response_status || 0);
+        const cls = st < 300 ? 'text-emerald-400' : (st < 400 ? 'text-yellow-400' : 'text-red-400');
+        return `<span class="${cls}">${st}</span>`;
+    }
+
+    function incTotal() {
+        if (!totalEl) return;
+        const n = parseInt(totalEl.textContent, 10);
+        if (!Number.isNaN(n)) totalEl.textContent = (n + 1) + ' total';
+    }
+
+    function addRow(evt) {
+        if (!bodyEl || currentPage !== 1) return;
+        const emptyRow = document.getElementById('sent-empty-row');
+        if (emptyRow) emptyRow.remove();
+
+        const created = new Date(evt.created_at);
+        const mm = String(created.getMonth() + 1).padStart(2, '0');
+        const dd = String(created.getDate()).padStart(2, '0');
+        const hh = String(created.getHours()).padStart(2, '0');
+        const mi = String(created.getMinutes()).padStart(2, '0');
+        const ss = String(created.getSeconds()).padStart(2, '0');
+        const createdText = `${mm}-${dd} ${hh}:${mi}:${ss}`;
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-800/50 transition';
+        tr.innerHTML = `
+            <td class="px-4 py-3">${evt.id}</td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs font-medium ${typeBadgeClass(evt.type)}">${evt.type}</span></td>
+            <td class="px-4 py-3 font-mono">${evt.method}</td>
+            <td class="px-4 py-3 text-gray-300 truncate max-w-xs">${evt.url}</td>
+            <td class="px-4 py-3">${statusHtml(evt)}</td>
+            <td class="px-4 py-3 text-gray-400">${evt.duration_ms || 0}ms</td>
+            <td class="px-4 py-3 text-gray-400">${createdText}</td>
+            <td class="px-4 py-3"><a href="/send/history/${evt.id}" class="text-emerald-400 hover:underline">Detail →</a></td>
+        `;
+        bodyEl.prepend(tr);
+        if (bodyEl.children.length > 50) bodyEl.removeChild(bodyEl.lastElementChild);
+    }
+
+    function initLiveSentHistory() {
+        if (!window.liveUpdates || !window.liveUpdates.start) {
+            setTimeout(initLiveSentHistory, 100);
+            return;
+        }
+
+        const live = window.liveUpdates.start({
+            initialSentRequestId: Number('{{.latestSentID}}')
+        });
+
+        live.on('new_sent_request', function (evt) {
+            if (currentPage === 1) {
+                addRow(evt || {});
+                incTotal();
+            }
+        });
+    }
+
+    initLiveSentHistory();
+})();
+</script>
+{{end}}

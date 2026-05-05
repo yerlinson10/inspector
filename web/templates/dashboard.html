@@ -1,0 +1,93 @@
+{{define "content"}}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Endpoints -->
+    <div class="lg:col-span-2">
+        <h2 class="text-2xl font-bold mb-4">Endpoints</h2>
+        {{if .endpoints}}
+        <div class="grid gap-3">
+            {{range .endpoints}}
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="font-semibold text-lg">{{.Name}}</h3>
+                        <p class="text-gray-400 text-sm">{{.Description}}</p>
+                        <div class="mt-2 flex gap-2 items-center">
+                            <code class="bg-gray-900 px-2 py-1 rounded text-emerald-400 text-sm">/in/{{.Slug}}</code>
+                            <button onclick="copyToClipboard(window.location.origin + '/in/{{.Slug}}')" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">Copy URL</button>
+                            <code class="bg-gray-900 px-2 py-1 rounded text-blue-400 text-sm">ws:///in/{{.Slug}}/ws</code>
+                        </div>
+                    </div>
+                    <div class="text-right text-sm text-gray-400">
+                        <div>{{.TotalRequests}} requests</div>
+                        {{if .LastRequest}}<div>Last: {{.LastRequest.Format "2006-01-02 15:04"}}</div>{{end}}
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        {{else}}
+        <div class="bg-gray-800 rounded-lg p-8 text-center border border-gray-700">
+            <p class="text-gray-400">No endpoints yet. <a href="/endpoints" class="text-emerald-400 hover:underline">Create one</a></p>
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Live Feed -->
+    <div>
+        <h2 class="text-2xl font-bold mb-4">Live Feed</h2>
+        <div id="live-feed" class="space-y-2 max-h-[600px] overflow-y-auto">
+            {{range .recentRequests}}
+            <div class="bg-gray-800 rounded p-3 border border-gray-700 text-sm">
+                <div class="flex justify-between">
+                    <span class="font-mono">
+                        <span class="{{if eq .Type "websocket"}}text-purple-400{{else if eq .Type "webhook"}}text-yellow-400{{else}}text-blue-400{{end}}">{{.Type}}</span>
+                        <span class="text-gray-300">{{.Method}}</span>
+                    </span>
+                    <a href="/requests/{{.ID}}" class="text-emerald-400 hover:underline">→</a>
+                </div>
+                <div class="text-gray-400 truncate">{{.EndpointSlug}}</div>
+                <div class="text-gray-500 text-xs">{{.CreatedAt.Format "15:04:05"}}</div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text);
+}
+
+function initLiveFeed() {
+    if (!window.liveUpdates || !window.liveUpdates.start) {
+        setTimeout(initLiveFeed, 100);
+        return;
+    }
+
+    const live = window.liveUpdates.start({
+        initialRequestId: Number('{{.latestRequestID}}')
+    });
+
+    live.on('new_request', function(req) {
+        const typeClass = req.type === 'websocket' ? 'text-purple-400' : req.type === 'webhook' ? 'text-yellow-400' : 'text-blue-400';
+        const html = `
+            <div class="bg-gray-800 rounded p-3 border border-gray-700 text-sm fade-in">
+                <div class="flex justify-between">
+                    <span class="font-mono">
+                        <span class="${typeClass}">${req.type}</span>
+                        <span class="text-gray-300">${req.method}</span>
+                    </span>
+                    <a href="/requests/${req.id}" class="text-emerald-400 hover:underline">→</a>
+                </div>
+                <div class="text-gray-400 truncate">${req.endpoint_slug}</div>
+                <div class="text-gray-500 text-xs">${new Date(req.created_at).toLocaleTimeString()}</div>
+            </div>`;
+        const feed = document.getElementById('live-feed');
+        feed.insertAdjacentHTML('afterbegin', html);
+        if (feed.children.length > 50) feed.lastElementChild.remove();
+    });
+}
+
+initLiveFeed();
+</script>
+{{end}}

@@ -1,0 +1,165 @@
+{{define "content"}}
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold">Requests</h2>
+    <span id="requests-total" class="text-gray-400">{{.total}} total</span>
+</div>
+
+<!-- Filters -->
+<div class="bg-gray-800 rounded-lg p-4 border border-gray-700 mb-6">
+    <form method="GET" action="/requests" class="flex flex-wrap gap-4 items-end">
+        <div>
+            <label class="block text-sm text-gray-400 mb-1">Type</label>
+            <select name="type" class="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                <option value="">All</option>
+                <option value="http" {{if eq .currentType "http"}}selected{{end}}>HTTP</option>
+                <option value="webhook" {{if eq .currentType "webhook"}}selected{{end}}>Webhook</option>
+                <option value="websocket" {{if eq .currentType "websocket"}}selected{{end}}>WebSocket</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm text-gray-400 mb-1">Endpoint</label>
+            <select name="endpoint" class="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                <option value="">All</option>
+                {{range .endpoints}}
+                <option value="{{.Slug}}" {{if eq $.currentSlug .Slug}}selected{{end}}>{{.Name}}</option>
+                {{end}}
+            </select>
+        </div>
+        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded font-medium transition">Filter</button>
+        <a href="/requests" class="text-gray-400 hover:text-gray-200 px-4 py-2">Reset</a>
+    </form>
+</div>
+
+<!-- Requests Table -->
+<div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-800 text-gray-400">
+            <tr>
+                <th class="px-4 py-3 text-left">#</th>
+                <th class="px-4 py-3 text-left">Type</th>
+                <th class="px-4 py-3 text-left">Method</th>
+                <th class="px-4 py-3 text-left">Endpoint</th>
+                <th class="px-4 py-3 text-left">IP</th>
+                <th class="px-4 py-3 text-left">Size</th>
+                <th class="px-4 py-3 text-left">Time</th>
+                <th class="px-4 py-3 text-left"></th>
+            </tr>
+        </thead>
+        <tbody id="requests-body" class="divide-y divide-gray-700">
+            {{if .requests}}
+            {{range .requests}}
+            <tr class="hover:bg-gray-800/50 transition">
+                <td class="px-4 py-3">{{.ID}}</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded text-xs font-medium {{if eq .Type "websocket"}}bg-purple-900/50 text-purple-300{{else if eq .Type "webhook"}}bg-yellow-900/50 text-yellow-300{{else}}bg-blue-900/50 text-blue-300{{end}}">{{.Type}}</span>
+                </td>
+                <td class="px-4 py-3 font-mono">{{.Method}}</td>
+                <td class="px-4 py-3 text-emerald-400">{{.EndpointSlug}}</td>
+                <td class="px-4 py-3 text-gray-400">{{.RemoteAddr}}</td>
+                <td class="px-4 py-3 text-gray-400">{{.SizeBytes}}B</td>
+                <td class="px-4 py-3 text-gray-400">{{.CreatedAt.Format "01-02 15:04:05"}}</td>
+                <td class="px-4 py-3"><a href="/requests/{{.ID}}" class="text-emerald-400 hover:underline">Detail →</a></td>
+            </tr>
+            {{end}}
+            {{else}}
+            <tr id="requests-empty-row">
+                <td colspan="8" class="px-4 py-8 text-center text-gray-400">No requests captured yet.</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{{if gt .totalPages 1}}
+<div class="flex justify-center gap-2 mt-6">
+    {{if gt .page 1}}
+    <a href="/requests?page={{subtract .page 1}}&type={{.currentType}}&endpoint={{.currentSlug}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">← Prev</a>
+    {{end}}
+    <span class="px-3 py-1 text-gray-400">Page {{.page}} of {{.totalPages}}</span>
+    {{if lt .page .totalPages}}
+    <a href="/requests?page={{add .page 1}}&type={{.currentType}}&endpoint={{.currentSlug}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">Next →</a>
+    {{end}}
+</div>
+{{end}}
+
+<script>
+(() => {
+    const currentType = '{{.currentType}}';
+    const currentSlug = '{{.currentSlug}}';
+    const currentPage = Number('{{.page}}');
+    const totalEl = document.getElementById('requests-total');
+    const bodyEl = document.getElementById('requests-body');
+
+    function shouldRefresh(req) {
+        if (currentPage !== 1) return false;
+        if (currentType && req.type !== currentType) return false;
+        if (currentSlug && req.endpoint_slug !== currentSlug) return false;
+        return true;
+    }
+
+    function typeBadgeClass(type) {
+        if (type === 'websocket') return 'bg-purple-900/50 text-purple-300';
+        if (type === 'webhook') return 'bg-yellow-900/50 text-yellow-300';
+        return 'bg-blue-900/50 text-blue-300';
+    }
+
+    function incTotal() {
+        if (!totalEl) return;
+        const n = parseInt(totalEl.textContent, 10);
+        if (!Number.isNaN(n)) totalEl.textContent = (n + 1) + ' total';
+    }
+
+    function addRow(req) {
+        if (!bodyEl) return;
+        const emptyRow = document.getElementById('requests-empty-row');
+        if (emptyRow) emptyRow.remove();
+
+        const created = new Date(req.created_at);
+        const mm = String(created.getMonth() + 1).padStart(2, '0');
+        const dd = String(created.getDate()).padStart(2, '0');
+        const hh = String(created.getHours()).padStart(2, '0');
+        const mi = String(created.getMinutes()).padStart(2, '0');
+        const ss = String(created.getSeconds()).padStart(2, '0');
+        const createdText = `${mm}-${dd} ${hh}:${mi}:${ss}`;
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-800/50 transition';
+        tr.innerHTML = `
+            <td class="px-4 py-3">${req.id}</td>
+            <td class="px-4 py-3">
+                <span class="px-2 py-0.5 rounded text-xs font-medium ${typeBadgeClass(req.type)}">${req.type}</span>
+            </td>
+            <td class="px-4 py-3 font-mono">${req.method}</td>
+            <td class="px-4 py-3 text-emerald-400">${req.endpoint_slug}</td>
+            <td class="px-4 py-3 text-gray-400">${req.remote_addr || ''}</td>
+            <td class="px-4 py-3 text-gray-400">${(req.size_bytes ?? 0)}B</td>
+            <td class="px-4 py-3 text-gray-400">${createdText}</td>
+            <td class="px-4 py-3"><a href="/requests/${req.id}" class="text-emerald-400 hover:underline">Detail →</a></td>
+        `;
+        bodyEl.prepend(tr);
+        if (bodyEl.children.length > 50) bodyEl.removeChild(bodyEl.lastElementChild);
+    }
+
+    function initLiveRequests() {
+        if (!window.liveUpdates || !window.liveUpdates.start) {
+            setTimeout(initLiveRequests, 100);
+            return;
+        }
+
+        const live = window.liveUpdates.start({
+            initialRequestId: Number('{{.latestRequestID}}')
+        });
+
+        live.on('new_request', function (req) {
+            if (shouldRefresh(req || {})) {
+                addRow(req);
+                incTotal();
+            }
+        });
+    }
+
+    initLiveRequests();
+})();
+</script>
+{{end}}

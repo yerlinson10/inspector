@@ -1,0 +1,71 @@
+{{define "content"}}
+<h2 class="text-2xl font-bold mb-6">Send HTTP Request</h2>
+
+{{if .success}}
+<div class="bg-emerald-900/30 border border-emerald-600 text-emerald-200 px-4 py-3 rounded mb-4">
+    Request sent successfully! Status: {{.response_status}} ({{.duration}}ms)
+    {{if .sent_id}}<a href="/send/history/{{.sent_id}}" class="underline ml-2">View details →</a>{{end}}
+</div>
+{{end}}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Request Form -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <form method="POST" action="/send/http">
+            <div class="space-y-4">
+                <div class="flex gap-3">
+                    <div class="w-32">
+                        <label class="block text-sm text-gray-400 mb-1">Method</label>
+                        <select name="method" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            <option {{if eq .method "GET"}}selected{{end}}>GET</option>
+                            <option {{if eq .method "POST"}}selected{{end}}>POST</option>
+                            <option {{if eq .method "PUT"}}selected{{end}}>PUT</option>
+                            <option {{if eq .method "PATCH"}}selected{{end}}>PATCH</option>
+                            <option {{if eq .method "DELETE"}}selected{{end}}>DELETE</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm text-gray-400 mb-1">URL</label>
+                        <input type="url" name="url" value="{{.url}}" required class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="https://example.com/api/webhook">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Type</label>
+                    <select name="type" class="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        <option value="http">HTTP</option>
+                        <option value="webhook">Webhook</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Headers (JSON or Key: Value per line)</label>
+                    <textarea name="headers" rows="4" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'>{{.headers}}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Body</label>
+                    <textarea name="body" rows="8" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"key": "value"}'>{{.body}}</textarea>
+                </div>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-6 py-2 rounded font-medium transition w-full">Send Request</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Response -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h3 class="text-lg font-semibold mb-4">Response</h3>
+        {{if .success}}
+        <div class="space-y-4">
+            <div class="flex gap-4 text-sm">
+                <span class="px-2 py-1 rounded {{if lt .response_status 300}}bg-emerald-900/50 text-emerald-300{{else if lt .response_status 400}}bg-yellow-900/50 text-yellow-300{{else}}bg-red-900/50 text-red-300{{end}}">{{.response_status}}</span>
+                <span class="text-gray-400">{{.duration}}ms</span>
+            </div>
+            <div>
+                <h4 class="text-sm text-gray-400 mb-1">Body</h4>
+                <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto max-h-96">{{.response_body}}</pre>
+            </div>
+        </div>
+        {{else}}
+        <p class="text-gray-500">Send a request to see the response here.</p>
+        {{end}}
+    </div>
+</div>
+{{end}}

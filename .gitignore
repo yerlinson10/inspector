@@ -1,0 +1,44 @@
+# ── Binarios compilados ──────────────────────────────────────────
+inspector
+inspector.exe
+*.exe
+*.out
+dist/
+
+# ── Módulos Go ───────────────────────────────────────────────────
+# go.sum SÍ se commitea; vendor solo si usas `go mod vendor`
+vendor/
+
+# ── Tests y profiling ────────────────────────────────────────────
+*.test
+*.prof
+coverage.out
+coverage.html
+
+# ── Base de datos SQLite (generada en runtime) ───────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Configuración (contiene credenciales) ────────────────────────
+# Commitea config.example.yaml como plantilla sin secretos
+config.yaml
+config.test.yaml
+config.test2.yaml
+
+# ── Logs ─────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Sistema operativo ────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDEs y editores ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swa
+*~

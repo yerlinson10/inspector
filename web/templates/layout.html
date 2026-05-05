@@ -1,0 +1,432 @@
+{{define "layout.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspector - {{.title}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        pre { white-space: pre-wrap; word-break: break-all; }
+        body { font-family: 'Space Grotesk', sans-serif; }
+
+        :root {
+            --bg-a: #0b1220;
+            --bg-b: #0f172a;
+            --panel: #111827;
+            --panel-soft: #172033;
+            --line: #263244;
+            --text-soft: #8ea3bf;
+            --accent: #20c997;
+            --danger: #f87171;
+        }
+
+        .app-bg {
+            background:
+                radial-gradient(1200px 500px at 100% -10%, rgba(32, 201, 151, 0.12), transparent 60%),
+                radial-gradient(800px 500px at -5% 110%, rgba(56, 189, 248, 0.10), transparent 65%),
+                linear-gradient(145deg, var(--bg-a), var(--bg-b));
+        }
+
+        .nav-link {
+            color: #d2dfef;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .nav-icon {
+            width: 16px;
+            height: 16px;
+            color: #86a5c8;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(32, 201, 151, 0.08);
+            border-color: rgba(32, 201, 151, 0.25);
+            color: #f5fbff;
+        }
+
+        .nav-link:hover .nav-icon {
+            color: #c7ffe9;
+        }
+
+        .nav-link.active {
+            background: rgba(32, 201, 151, 0.16);
+            border-color: rgba(32, 201, 151, 0.45);
+            color: #ecfdf5;
+            box-shadow: inset 0 0 0 1px rgba(32, 201, 151, 0.3);
+        }
+
+        .nav-link.active .nav-icon {
+            color: #8af4c8;
+        }
+
+        .content-shell {
+            background: linear-gradient(180deg, rgba(17, 24, 39, 0.76), rgba(17, 24, 39, 0.56));
+            border: 1px solid rgba(66, 84, 110, 0.45);
+            box-shadow: 0 20px 55px rgba(0, 0, 0, 0.35);
+        }
+
+        .menu-open {
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="app-bg text-gray-100 min-h-screen">
+    <div class="lg:hidden sticky top-0 z-40 backdrop-blur bg-slate-900/85 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
+        <a href="/dashboard" class="text-lg font-bold tracking-wide text-emerald-300">Inspector</a>
+        <button id="menu-toggle" class="px-3 py-2 rounded border border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700 transition flex items-center gap-2" type="button" aria-label="Open menu">
+            <i data-lucide="menu" class="w-4 h-4"></i>
+            <span>Menu</span>
+        </button>
+    </div>
+
+    <div class="flex min-h-screen">
+        <aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-50 h-screen w-72 -translate-x-full lg:translate-x-0 transition-transform duration-300 bg-slate-950/95 border-r border-slate-700 lg:border-slate-800 backdrop-blur">
+            <div class="h-full flex flex-col p-5">
+                <div class="mb-6">
+                    <a href="/dashboard" class="block text-2xl font-bold tracking-tight text-emerald-300">Inspector</a>
+                    <p class="text-sm text-slate-400 mt-1">Webhook and request dashboard</p>
+                </div>
+
+                <div class="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2">Main</div>
+                <nav class="space-y-1.5">
+                    <a href="/dashboard" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/dashboard"><i data-lucide="layout-dashboard" class="nav-icon"></i><span>Dashboard</span></a>
+                    <a href="/endpoints" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/endpoints"><i data-lucide="webhook" class="nav-icon"></i><span>Endpoints</span></a>
+                    <a href="/requests" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/requests"><i data-lucide="list-filter" class="nav-icon"></i><span>Requests</span></a>
+                    <a href="/docs" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/docs"><i data-lucide="book-open-text" class="nav-icon"></i><span>Docs</span></a>
+                </nav>
+
+                <div class="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2 mt-7">Tools</div>
+                <nav class="space-y-1.5">
+                    <a href="/send" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/send"><i data-lucide="send" class="nav-icon"></i><span>Sender</span></a>
+                    <a href="/send/ws-client" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/send/ws-client"><i data-lucide="plug-zap" class="nav-icon"></i><span>WS Client</span></a>
+                    <a href="/send/history" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/send/history"><i data-lucide="history" class="nav-icon"></i><span>History</span></a>
+                </nav>
+
+                <div class="mt-auto pt-6">
+                    <a href="/logout" class="flex items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-red-300 hover:bg-red-500/20 transition"><i data-lucide="log-out" class="w-4 h-4"></i><span>Logout</span></a>
+                </div>
+            </div>
+        </aside>
+
+        <div id="sidebar-overlay" class="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm hidden lg:hidden"></div>
+
+        <div id="app-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+            <div id="app-modal-backdrop" class="absolute inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+            <div class="relative w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
+                <div class="px-5 py-4 border-b border-slate-700">
+                    <h3 id="app-modal-title" class="text-lg font-semibold text-slate-100">Notice</h3>
+                </div>
+                <div class="px-5 py-4">
+                    <p id="app-modal-message" class="text-slate-300"></p>
+                </div>
+                <div class="px-5 py-4 border-t border-slate-700 flex items-center justify-end gap-2">
+                    <button id="app-modal-cancel" type="button" class="hidden rounded-lg border border-slate-600 px-3 py-2 text-slate-200 hover:bg-slate-800 transition">Cancel</button>
+                    <button id="app-modal-ok" type="button" class="rounded-lg bg-emerald-600 px-3 py-2 text-white hover:bg-emerald-500 transition">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 lg:ml-0 min-w-0">
+            <main class="w-full p-4 md:p-7 lg:p-8">
+                <div class="mx-auto w-full max-w-7xl">
+                    <section class="content-shell rounded-2xl p-4 md:p-6 lg:p-8">
+                        {{if .error}}
+                        <div class="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4">{{.error}}</div>
+                        {{end}}
+                        {{template "content" .}}
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const modal = document.getElementById('app-modal');
+            const backdrop = document.getElementById('app-modal-backdrop');
+            const titleEl = document.getElementById('app-modal-title');
+            const messageEl = document.getElementById('app-modal-message');
+            const okBtn = document.getElementById('app-modal-ok');
+            const cancelBtn = document.getElementById('app-modal-cancel');
+
+            function openModal(opts) {
+                if (!modal || !titleEl || !messageEl || !okBtn || !cancelBtn) {
+                    return Promise.resolve(false);
+                }
+
+                titleEl.textContent = opts.title || 'Notice';
+                messageEl.textContent = opts.message || '';
+                okBtn.textContent = opts.okText || 'OK';
+                cancelBtn.textContent = opts.cancelText || 'Cancel';
+
+                if (opts.type === 'confirm') {
+                    cancelBtn.classList.remove('hidden');
+                } else {
+                    cancelBtn.classList.add('hidden');
+                }
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                return new Promise(function (resolve) {
+                    const onOk = function () {
+                        cleanup();
+                        resolve(true);
+                    };
+
+                    const onCancel = function () {
+                        cleanup();
+                        resolve(false);
+                    };
+
+                    const onKeyDown = function (event) {
+                        if (event.key === 'Escape') {
+                            onCancel();
+                        }
+                    };
+
+                    function cleanup() {
+                        okBtn.removeEventListener('click', onOk);
+                        cancelBtn.removeEventListener('click', onCancel);
+                        if (backdrop) backdrop.removeEventListener('click', onCancel);
+                        document.removeEventListener('keydown', onKeyDown);
+                        modal.classList.add('hidden');
+                        modal.classList.remove('flex');
+                    }
+
+                    okBtn.addEventListener('click', onOk);
+                    cancelBtn.addEventListener('click', onCancel);
+                    if (backdrop) backdrop.addEventListener('click', onCancel);
+                    document.addEventListener('keydown', onKeyDown);
+                });
+            }
+
+            window.appAlert = function (message, title) {
+                return openModal({ type: 'alert', message: message, title: title || 'Notice', okText: 'OK' });
+            };
+
+            window.appConfirm = function (message, title) {
+                return openModal({ type: 'confirm', message: message, title: title || 'Confirm', okText: 'Continue', cancelText: 'Cancel' });
+            };
+        })();
+
+        (function () {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.getElementById('menu-toggle');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            function openMenu() {
+                if (!sidebar || !overlay) return;
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                document.body.classList.add('menu-open');
+            }
+
+            function closeMenu() {
+                if (!sidebar || !overlay) return;
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+                document.body.classList.remove('menu-open');
+            }
+
+            if (toggle) {
+                toggle.addEventListener('click', function () {
+                    if (sidebar.classList.contains('-translate-x-full')) {
+                        openMenu();
+                    } else {
+                        closeMenu();
+                    }
+                });
+            }
+
+            if (overlay) {
+                overlay.addEventListener('click', closeMenu);
+            }
+
+            window.addEventListener('resize', function () {
+                if (window.innerWidth >= 1024) {
+                    closeMenu();
+                }
+            });
+
+            const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
+            const navLinks = Array.from(document.querySelectorAll('[data-nav]'));
+            const matchRules = {
+                '/dashboard': { exact: true, prefix: false, rootAlias: true },
+                '/endpoints': { exact: true, prefix: true, rootAlias: false },
+                '/requests': { exact: true, prefix: true, rootAlias: false },
+                '/docs': { exact: true, prefix: true, rootAlias: false },
+                '/send': { exact: true, prefix: false, rootAlias: false },
+                '/send/ws-client': { exact: true, prefix: true, rootAlias: false },
+                '/send/history': { exact: true, prefix: true, rootAlias: false }
+            };
+
+            let bestMatch = null;
+            let bestScore = -1;
+
+            navLinks.forEach(function (link) {
+                link.classList.remove('active');
+
+                const rawNavPath = link.getAttribute('data-nav');
+                if (!rawNavPath) return;
+
+                const navPath = rawNavPath.replace(/\/$/, '') || '/';
+                const rules = matchRules[navPath] || { exact: true, prefix: true, rootAlias: false };
+                const isExact = rules.exact && currentPath === navPath;
+                const isNested = rules.prefix && navPath !== '/' && currentPath.startsWith(navPath + '/');
+                const isDashboardRoot = rules.rootAlias && currentPath === '/';
+
+                if (!(isExact || isNested || isDashboardRoot)) return;
+
+                const score = navPath.length;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMatch = link;
+                }
+            });
+
+            if (bestMatch) {
+                bestMatch.classList.add('active');
+            }
+
+            if (window.lucide && window.lucide.createIcons) {
+                window.lucide.createIcons();
+            }
+
+            navLinks.forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (window.innerWidth < 1024) {
+                        closeMenu();
+                    }
+                });
+            });
+        })();
+
+        (function () {
+            function createLiveUpdates(options) {
+                const opts = options || {};
+                const listeners = {};
+                let sinceRequestId = Number(opts.initialRequestId || 0);
+                let sinceSentRequestId = Number(opts.initialSentRequestId || 0);
+                let pollBusy = false;
+                let closed = false;
+
+                const pollIntervalMs = Number(opts.pollIntervalMs || 1500);
+                const pollLimit = Number(opts.pollLimit || 100);
+
+                function emit(type, payload) {
+                    const handlers = listeners[type] || [];
+                    handlers.forEach(function (fn) {
+                        try {
+                            fn(payload);
+                        } catch (_) {}
+                    });
+                }
+
+                function on(type, fn) {
+                    if (!listeners[type]) listeners[type] = [];
+                    listeners[type].push(fn);
+                    return function off() {
+                        listeners[type] = (listeners[type] || []).filter(function (cb) {
+                            return cb !== fn;
+                        });
+                    };
+                }
+
+                function handleEvent(msg) {
+                    if (!msg || !msg.type) return;
+                    if (msg.type === 'new_request' && msg.data) {
+                        const reqId = Number(msg.data.id || 0);
+                        if (reqId > 0 && reqId <= sinceRequestId) return;
+                        if (reqId > sinceRequestId) sinceRequestId = reqId;
+                    }
+                    if (msg.type === 'new_sent_request' && msg.data) {
+                        const sentId = Number(msg.data.id || 0);
+                        if (sentId > 0 && sentId <= sinceSentRequestId) return;
+                        if (sentId > sinceSentRequestId) sinceSentRequestId = sentId;
+                    }
+                    emit(msg.type, msg.data || {});
+                }
+
+                function startSSE() {
+                    if (!window.EventSource) return null;
+                    const sse = new EventSource('/events');
+                    sse.onmessage = function (event) {
+                        try {
+                            handleEvent(JSON.parse(event.data));
+                        } catch (_) {}
+                    };
+                    return sse;
+                }
+
+                async function runPoll() {
+                    if (pollBusy || closed) return;
+                    pollBusy = true;
+                    try {
+                        const query = new URLSearchParams({
+                            since_request_id: String(sinceRequestId),
+                            since_sent_request_id: String(sinceSentRequestId),
+                            limit: String(pollLimit)
+                        });
+                        const res = await fetch('/events/poll?' + query.toString(), {
+                            method: 'GET',
+                            cache: 'no-store',
+                            credentials: 'same-origin'
+                        });
+                        if (!res.ok) return;
+                        const data = await res.json();
+
+                        const requests = Array.isArray(data.new_requests) ? data.new_requests : [];
+                        const sent = Array.isArray(data.new_sent_requests) ? data.new_sent_requests : [];
+
+                        requests.forEach(function (req) {
+                            handleEvent({ type: 'new_request', data: req });
+                        });
+
+                        sent.forEach(function (evt) {
+                            handleEvent({ type: 'new_sent_request', data: evt });
+                        });
+
+                        const latestReq = Number(data.latest_request_id || 0);
+                        const latestSent = Number(data.latest_sent_request_id || 0);
+                        if (latestReq > sinceRequestId) sinceRequestId = latestReq;
+                        if (latestSent > sinceSentRequestId) sinceSentRequestId = latestSent;
+                    } catch (_) {
+                    } finally {
+                        pollBusy = false;
+                    }
+                }
+
+                const sse = startSSE();
+                runPoll();
+                const pollTimer = setInterval(runPoll, pollIntervalMs);
+
+                return {
+                    on: on,
+                    close: function () {
+                        closed = true;
+                        clearInterval(pollTimer);
+                        if (sse) sse.close();
+                    }
+                };
+            }
+
+            window.liveUpdates = {
+                start: createLiveUpdates
+            };
+        })();
+    </script>
+</body>
+</html>
+{{end}}

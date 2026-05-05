@@ -1,0 +1,13 @@
+server:
+  port: 9090
+  host: "0.0.0.0"
+
+auth:
+  username: "admin"
+  password: "changeme"
+
+database:
+  path: "./inspector.db"
+
+settings:
+  max_requests: 10000

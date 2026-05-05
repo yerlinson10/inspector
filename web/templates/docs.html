@@ -1,0 +1,64 @@
+{{define "content"}}
+<div class="space-y-8">
+    <header class="border-b border-slate-700/80 pb-6">
+        <div class="flex items-center gap-2 text-emerald-300 mb-3">
+            <i data-lucide="book-open-text" class="w-5 h-5"></i>
+            <span class="text-sm uppercase tracking-[0.18em]">Documentacion</span>
+        </div>
+        <h2 class="text-3xl font-bold tracking-tight">Como usar Inspector</h2>
+        <p class="text-slate-300 mt-3 max-w-3xl">
+            Inspector te permite crear endpoints de prueba, inspeccionar peticiones entrantes en tiempo real y enviar
+            peticiones HTTP o WebSocket para pruebas de integracion.
+        </p>
+    </header>
+
+    <section class="grid gap-4 md:grid-cols-2">
+        <article class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
+            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2"><i data-lucide="rocket" class="w-5 h-5 text-emerald-300"></i><span>Inicio rapido</span></h3>
+            <ol class="list-decimal list-inside space-y-2 text-slate-200">
+                <li>Inicia sesion con tus credenciales.</li>
+                <li>Ve a Endpoints y crea un endpoint con Name y Slug.</li>
+                <li>Copia la URL generada y enviale peticiones desde tu sistema.</li>
+                <li>Abre Requests para ver cada solicitud capturada.</li>
+                <li>En Dashboard revisa actividad reciente y estadisticas.</li>
+            </ol>
+        </article>
+
+        <article class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
+            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2"><i data-lucide="send" class="w-5 h-5 text-sky-300"></i><span>Herramienta Sender</span></h3>
+            <ul class="list-disc list-inside space-y-2 text-slate-200">
+                <li>Usa Sender para probar APIs HTTP sin salir de Inspector.</li>
+                <li>Puedes enviar headers en JSON o formato Key: Value.</li>
+                <li>El historial queda guardado en History para reintentos.</li>
+                <li>WS Client sirve para conectarte y probar servicios WebSocket.</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
+        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2"><i data-lucide="terminal-square" class="w-5 h-5 text-amber-300"></i><span>Ejemplos utiles</span></h3>
+        <div class="grid gap-4 lg:grid-cols-2">
+            <div>
+                <p class="text-slate-300 mb-2">Enviar un webhook con curl:</p>
+                <pre class="bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 overflow-x-auto">curl -X POST "http://TU_HOST:PUERTO/in/mi-endpoint" \
+  -H "Content-Type: application/json" \
+  -d '{"event":"order.created","id":123}'</pre>
+            </div>
+            <div>
+                <p class="text-slate-300 mb-2">Conectar a un endpoint WebSocket:</p>
+                <pre class="bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 overflow-x-auto">ws://TU_HOST:PUERTO/in/mi-endpoint/ws</pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
+        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2"><i data-lucide="shield-check" class="w-5 h-5 text-emerald-300"></i><span>Buenas practicas</span></h3>
+        <ul class="list-disc list-inside space-y-2 text-slate-200">
+            <li>Usa slugs descriptivos por entorno, por ejemplo pagos-staging.</li>
+            <li>Limpia logs desde Endpoints si quieres sesiones de prueba mas limpias.</li>
+            <li>No compartas credenciales de login en ambientes publicos.</li>
+            <li>Si usas HTTPS con certificados de desarrollo, verifica la configuracion TLS del destino.</li>
+        </ul>
+    </section>
+</div>
+{{end}}

@@ -1,0 +1,80 @@
+{{define "content"}}
+<div class="mb-6">
+    <a href="/requests" class="text-gray-400 hover:text-emerald-400">← Back to Requests</a>
+</div>
+
+{{with .request}}
+<div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <h2 class="text-2xl font-bold">Request #{{.ID}}</h2>
+            <div class="flex gap-3 mt-2">
+                <span class="px-2 py-0.5 rounded text-xs font-medium {{if eq .Type "websocket"}}bg-purple-900/50 text-purple-300{{else if eq .Type "webhook"}}bg-yellow-900/50 text-yellow-300{{else}}bg-blue-900/50 text-blue-300{{end}}">{{.Type}}</span>
+                <span class="font-mono text-gray-300">{{.Method}}</span>
+                <span class="text-emerald-400">{{.EndpointSlug}}</span>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="copyAsCurl()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i><span>Copy as cURL</span></button>
+            <a href="/send?replay={{.ID}}" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="rotate-cw" class="w-4 h-4"></i><span>Replay</span></a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Meta -->
+        <div>
+            <h3 class="text-lg font-semibold mb-2 text-gray-300">Meta</h3>
+            <dl class="space-y-2 text-sm">
+                <div class="flex justify-between"><dt class="text-gray-400">Path</dt><dd class="font-mono">{{.Path}}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-400">Remote IP</dt><dd class="font-mono">{{.RemoteAddr}}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-400">Size</dt><dd>{{.SizeBytes}} bytes</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-400">Time</dt><dd>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</dd></div>
+            </dl>
+        </div>
+
+        <!-- Query Params -->
+        {{if .QueryParams}}
+        <div>
+            <h3 class="text-lg font-semibold mb-2 text-gray-300">Query Parameters</h3>
+            <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto" id="query-params">{{.QueryParams}}</pre>
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Headers -->
+    <div class="mt-6">
+        <h3 class="text-lg font-semibold mb-2 text-gray-300">Headers</h3>
+        <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto max-h-64" id="headers">{{.Headers}}</pre>
+    </div>
+
+    <!-- Body -->
+    {{if .Body}}
+    <div class="mt-6">
+        <h3 class="text-lg font-semibold mb-2 text-gray-300">Body</h3>
+        <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto max-h-96" id="body">{{.Body}}</pre>
+    </div>
+    {{end}}
+</div>
+
+<script>
+function copyAsCurl() {
+    const method = '{{.Method}}';
+    const body = document.getElementById('body')?.innerText || '';
+    let headers = {};
+    try { headers = JSON.parse(document.getElementById('headers').innerText); } catch(e) {}
+
+    let curl = `curl -X ${method} '${window.location.origin}${path}'`;
+    for (const [key, values] of Object.entries(headers)) {
+        if (Array.isArray(values)) {
+            values.forEach(v => { curl += ` \\\n  -H '${key}: ${v}'`; });
+        }
+    }
+    if (body) {
+        curl += ` \\\n  -d '${body.replace(/'/g, "'\\''")}'`;
+    }
+    navigator.clipboard.writeText(curl);
+    window.appAlert('Copied to clipboard!', 'Copied');
+}
+</script>
+{{end}}
+{{end}}
