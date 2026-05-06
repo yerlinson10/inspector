@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"inspector/internal/broadcaster"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"gorm.io/gorm"
 )
 
 var wsUpgrader = websocket.Upgrader{
@@ -88,31 +88,25 @@ func ReceiveRequest(c *gin.Context) {
 		},
 	})
 
-	// Send configured response
-	status := endpoint.ResponseStatus
-	if status < 100 || status > 599 {
-		status = 200
+	var rules []models.MockRule
+	storage.DB.Where("endpoint_id = ? AND is_active = ?", endpoint.ID, true).Find(&rules)
+	resolved := resolveResponse(endpoint, rules, c.Request, body)
+
+	for k, v := range resolved.headers {
+		c.Header(k, v)
 	}
 
-	contentType := "application/json"
-	if endpoint.ResponseHeaders != "" {
-		var respHeaders map[string]string
-		if err := json.Unmarshal([]byte(endpoint.ResponseHeaders), &respHeaders); err == nil {
-			for k, v := range respHeaders {
-				c.Header(k, v)
-				if strings.EqualFold(k, "Content-Type") && strings.TrimSpace(v) != "" {
-					contentType = strings.TrimSpace(v)
-				}
-			}
-		}
+	if resolved.delayMs > 0 {
+		time.Sleep(time.Duration(resolved.delayMs) * time.Millisecond)
 	}
 
-	respBody := endpoint.ResponseBody
-	if respBody == "" {
-		respBody = `{"status":"received"}`
+	if resolved.ruleID != 0 {
+		storage.DB.Model(&models.MockRule{}).
+			Where("id = ?", resolved.ruleID).
+			UpdateColumn("hit_count", gorm.Expr("hit_count + 1"))
 	}
 
-	c.Data(status, contentType, []byte(respBody))
+	c.Data(resolved.status, resolved.contentType, []byte(resolved.body))
 }
 
 func ReceiveWebSocket(c *gin.Context) {

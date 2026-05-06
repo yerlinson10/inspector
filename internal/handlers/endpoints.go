@@ -12,13 +12,14 @@ import (
 	"inspector/internal/storage"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 var slugRegex = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
 func ListEndpoints(c *gin.Context) {
 	var endpoints []models.Endpoint
-	storage.DB.Order("created_at DESC").Find(&endpoints)
+	loadEndpointsForPage(&endpoints)
 	renderEndpointsPage(c, http.StatusOK, endpoints, "")
 }
 
@@ -31,7 +32,7 @@ func CreateEndpoint(c *gin.Context) {
 		val, err := parseResponseStatus(s)
 		if err != nil {
 			var endpoints []models.Endpoint
-			storage.DB.Order("created_at DESC").Find(&endpoints)
+			loadEndpointsForPage(&endpoints)
 			renderEndpointsPage(c, http.StatusBadRequest, endpoints, err.Error())
 			return
 		}
@@ -41,21 +42,21 @@ func CreateEndpoint(c *gin.Context) {
 	responseBody := strings.TrimSpace(c.PostForm("response_body"))
 	if err := validateEndpointResponseConfig(responseHeaders, responseBody); err != nil {
 		var endpoints []models.Endpoint
-		storage.DB.Order("created_at DESC").Find(&endpoints)
+		loadEndpointsForPage(&endpoints)
 		renderEndpointsPage(c, http.StatusBadRequest, endpoints, err.Error())
 		return
 	}
 
 	if name == "" || slug == "" {
 		var endpoints []models.Endpoint
-		storage.DB.Order("created_at DESC").Find(&endpoints)
+		loadEndpointsForPage(&endpoints)
 		renderEndpointsPage(c, http.StatusBadRequest, endpoints, "Name and slug are required")
 		return
 	}
 
 	if !slugRegex.MatchString(slug) {
 		var endpoints []models.Endpoint
-		storage.DB.Order("created_at DESC").Find(&endpoints)
+		loadEndpointsForPage(&endpoints)
 		renderEndpointsPage(c, http.StatusBadRequest, endpoints, "Slug must be lowercase alphanumeric with hyphens only")
 		return
 	}
@@ -71,7 +72,7 @@ func CreateEndpoint(c *gin.Context) {
 
 	if err := storage.DB.Create(&endpoint).Error; err != nil {
 		var endpoints []models.Endpoint
-		storage.DB.Order("created_at DESC").Find(&endpoints)
+		loadEndpointsForPage(&endpoints)
 		if strings.Contains(err.Error(), "UNIQUE") {
 			renderEndpointsPage(c, http.StatusConflict, endpoints, "An endpoint with this slug already exists")
 			return
@@ -100,7 +101,7 @@ func UpdateEndpoint(c *gin.Context) {
 	if err := storage.DB.First(&endpoint, id).Error; err != nil {
 		if isHTMLForm {
 			var endpoints []models.Endpoint
-			storage.DB.Order("created_at DESC").Find(&endpoints)
+			loadEndpointsForPage(&endpoints)
 			renderEndpointsPage(c, http.StatusNotFound, endpoints, "Endpoint not found")
 			return
 		}
@@ -116,7 +117,7 @@ func UpdateEndpoint(c *gin.Context) {
 		if err != nil {
 			if isHTMLForm {
 				var endpoints []models.Endpoint
-				storage.DB.Order("created_at DESC").Find(&endpoints)
+				loadEndpointsForPage(&endpoints)
 				renderEndpointsPage(c, http.StatusBadRequest, endpoints, err.Error())
 				return
 			}
@@ -130,7 +131,7 @@ func UpdateEndpoint(c *gin.Context) {
 	if err := validateEndpointResponseConfig(responseHeaders, responseBody); err != nil {
 		if isHTMLForm {
 			var endpoints []models.Endpoint
-			storage.DB.Order("created_at DESC").Find(&endpoints)
+			loadEndpointsForPage(&endpoints)
 			renderEndpointsPage(c, http.StatusBadRequest, endpoints, err.Error())
 			return
 		}
@@ -149,7 +150,7 @@ func UpdateEndpoint(c *gin.Context) {
 	if err := storage.DB.Save(&endpoint).Error; err != nil {
 		if isHTMLForm {
 			var endpoints []models.Endpoint
-			storage.DB.Order("created_at DESC").Find(&endpoints)
+			loadEndpointsForPage(&endpoints)
 			renderEndpointsPage(c, http.StatusInternalServerError, endpoints, "failed to update endpoint")
 			return
 		}
@@ -182,6 +183,10 @@ func DeleteEndpoint(c *gin.Context) {
 
 	if err := storage.DB.Where("endpoint_id = ?", endpoint.ID).Delete(&models.RequestLog{}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete endpoint logs"})
+		return
+	}
+	if err := storage.DB.Where("endpoint_id = ?", endpoint.ID).Delete(&models.MockRule{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete endpoint mock rules"})
 		return
 	}
 	if err := storage.DB.Delete(&endpoint).Error; err != nil {
@@ -272,6 +277,12 @@ func validateEndpointResponseConfig(responseHeaders, responseBody string) error 
 	}
 
 	return nil
+}
+
+func loadEndpointsForPage(endpoints *[]models.Endpoint) {
+	storage.DB.Preload("MockRules", func(db *gorm.DB) *gorm.DB {
+		return db.Order("priority ASC, id ASC")
+	}).Order("created_at DESC").Find(endpoints)
 }
 
 type parseError struct {

@@ -10,5 +10,6 @@ type Endpoint struct {
 	ResponseStatus  int       `gorm:"default:200" json:"response_status"`
 	ResponseHeaders string    `gorm:"type:text" json:"response_headers"`
 	ResponseBody    string    `gorm:"type:text" json:"response_body"`
+	MockRules       []MockRule `gorm:"foreignKey:EndpointID" json:"mock_rules,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 }

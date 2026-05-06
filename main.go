@@ -114,6 +114,12 @@ func main() {
 		auth.POST("/endpoints/:id", handlers.UpdateEndpoint) // HTML form fallback
 		auth.DELETE("/endpoints/:id", handlers.DeleteEndpoint)
 		auth.POST("/endpoints/:id/clear", handlers.ClearEndpointLogs)
+		auth.GET("/endpoints/:id/mocks", handlers.ListMockRules)
+		auth.POST("/endpoints/:id/mocks", handlers.CreateMockRule)
+		auth.PUT("/endpoints/:id/mocks/:mockId", handlers.UpdateMockRule)
+		auth.POST("/endpoints/:id/mocks/:mockId", handlers.UpdateMockRule) // HTML form fallback
+		auth.DELETE("/endpoints/:id/mocks/:mockId", handlers.DeleteMockRule)
+		auth.POST("/endpoints/:id/mocks/:mockId/toggle", handlers.ToggleMockRule)
 
 		// Sender
 		auth.GET("/send", handlers.SenderPage)

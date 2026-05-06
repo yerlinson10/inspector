@@ -30,6 +30,7 @@ func Init(dbPath string) error {
 
 	return DB.AutoMigrate(
 		&models.Endpoint{},
+		&models.MockRule{},
 		&models.RequestLog{},
 		&models.SentRequest{},
 	)

@@ -123,6 +123,216 @@
                     </div>
                 </form>
             </details>
+
+            <details class="mt-3 group">
+                <summary class="cursor-pointer text-sm text-gray-300 hover:text-gray-100">Mock rules</summary>
+                <div class="mt-4 grid grid-cols-1 gap-4">
+                    <form method="POST" action="/endpoints/{{.ID}}/mocks" class="rounded border border-gray-700 bg-gray-950/40 p-3 space-y-3">
+                        <input type="hidden" name="csrf_token" value="{{$.csrfToken}}">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Name</label>
+                                <input type="text" name="name" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="Success mock">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Priority</label>
+                                <input type="number" name="priority" value="100" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Method</label>
+                                <input type="text" name="method" placeholder="ANY" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Path mode</label>
+                                <select name="path_mode" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                    <option value="any">any</option>
+                                    <option value="exact">exact</option>
+                                    <option value="prefix">prefix</option>
+                                    <option value="regex">regex</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs text-gray-400 mb-1">Path value</label>
+                                <input type="text" name="path_value" placeholder="/in/{{.Slug}}" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Query mode</label>
+                                <select name="query_mode" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                    <option value="any">any</option>
+                                    <option value="contains">contains</option>
+                                    <option value="exact">exact</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Headers mode</label>
+                                <select name="headers_mode" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                    <option value="any">any</option>
+                                    <option value="contains">contains</option>
+                                    <option value="exact">exact</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Query JSON</label>
+                                <textarea name="query_json" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none" placeholder='{"event":"deploy"}'></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Headers JSON</label>
+                                <textarea name="headers_json" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none" placeholder='{"X-Env":"prod"}'></textarea>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Body mode</label>
+                                <select name="body_mode" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                    <option value="any">any</option>
+                                    <option value="exact">exact</option>
+                                    <option value="contains">contains</option>
+                                    <option value="regex">regex</option>
+                                    <option value="json">json</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs text-gray-400 mb-1">Body pattern</label>
+                                <textarea name="body_pattern" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none" placeholder='{"status":"ok"}'></textarea>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Response status</label>
+                                <input type="number" name="response_status" value="200" min="100" max="599" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Delay (ms)</label>
+                                <input type="number" name="delay_ms" value="0" min="0" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            </div>
+                            <div class="flex items-end">
+                                <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+                                    <input type="checkbox" name="is_active" checked class="rounded border-gray-600 bg-gray-900">
+                                    Active
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Response headers (JSON)</label>
+                                <textarea name="response_headers" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{"Content-Type":"application/json"}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Response body (JSON)</label>
+                                <textarea name="response_body" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{"status":"mocked"}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium transition">Create Mock Rule</button>
+                        </div>
+                    </form>
+
+                    {{if .MockRules}}
+                    {{$ep := .}}
+                    <div class="space-y-3">
+                        {{range $rule := .MockRules}}
+                        <form method="POST" action="/endpoints/{{$ep.ID}}/mocks/{{$rule.ID}}" class="rounded border border-gray-700 bg-gray-950/30 p-3 space-y-3">
+                            <input type="hidden" name="csrf_token" value="{{$.csrfToken}}">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="text-xs text-gray-300">
+                                    Rule #{{$rule.ID}} · Hits: {{$rule.HitCount}} · Priority: {{$rule.Priority}}
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="toggleMockRule({{$ep.ID}}, {{$rule.ID}})" class="px-2 py-1 rounded border text-xs {{if $rule.IsActive}}border-emerald-500/50 text-emerald-300{{else}}border-gray-500/50 text-gray-300{{end}}">{{if $rule.IsActive}}Active{{else}}Inactive{{end}}</button>
+                                    <button type="button" onclick="deleteMockRule({{$ep.ID}}, {{$rule.ID}})" class="px-2 py-1 rounded border border-red-500/50 text-red-300 text-xs">Delete</button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                                <input type="text" name="name" value="{{$rule.Name}}" class="bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                <input type="number" name="priority" value="{{$rule.Priority}}" class="bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                <input type="text" name="method" value="{{$rule.Method}}" placeholder="ANY" class="bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                <select name="path_mode" class="bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                    <option value="any" {{if eq $rule.PathMode "any"}}selected{{end}}>any</option>
+                                    <option value="exact" {{if eq $rule.PathMode "exact"}}selected{{end}}>exact</option>
+                                    <option value="prefix" {{if eq $rule.PathMode "prefix"}}selected{{end}}>prefix</option>
+                                    <option value="regex" {{if eq $rule.PathMode "regex"}}selected{{end}}>regex</option>
+                                </select>
+                            </div>
+                            <input type="text" name="path_value" value="{{$rule.PathValue}}" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="Path value">
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[11px] text-gray-400 mb-1">Query mode/json</label>
+                                    <select name="query_mode" class="w-full mb-1 bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq $rule.QueryMode "any"}}selected{{end}}>any</option>
+                                        <option value="contains" {{if eq $rule.QueryMode "contains"}}selected{{end}}>contains</option>
+                                        <option value="exact" {{if eq $rule.QueryMode "exact"}}selected{{end}}>exact</option>
+                                    </select>
+                                    <textarea name="query_json" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{$rule.QueryJSON}}</textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-gray-400 mb-1">Headers mode/json</label>
+                                    <select name="headers_mode" class="w-full mb-1 bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq $rule.HeadersMode "any"}}selected{{end}}>any</option>
+                                        <option value="contains" {{if eq $rule.HeadersMode "contains"}}selected{{end}}>contains</option>
+                                        <option value="exact" {{if eq $rule.HeadersMode "exact"}}selected{{end}}>exact</option>
+                                    </select>
+                                    <textarea name="headers_json" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{$rule.HeadersJSON}}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[11px] text-gray-400 mb-1">Body mode/pattern</label>
+                                    <select name="body_mode" class="w-full mb-1 bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq $rule.BodyMode "any"}}selected{{end}}>any</option>
+                                        <option value="exact" {{if eq $rule.BodyMode "exact"}}selected{{end}}>exact</option>
+                                        <option value="contains" {{if eq $rule.BodyMode "contains"}}selected{{end}}>contains</option>
+                                        <option value="regex" {{if eq $rule.BodyMode "regex"}}selected{{end}}>regex</option>
+                                        <option value="json" {{if eq $rule.BodyMode "json"}}selected{{end}}>json</option>
+                                    </select>
+                                    <textarea name="body_pattern" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{$rule.BodyPattern}}</textarea>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-[11px] text-gray-400 mb-1">Status</label>
+                                        <input type="number" name="response_status" value="{{$rule.ResponseStatus}}" min="100" max="599" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] text-gray-400 mb-1">Delay ms</label>
+                                        <input type="number" name="delay_ms" value="{{$rule.DelayMs}}" min="0" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                    </div>
+                                    <label class="inline-flex items-center gap-2 text-xs text-gray-300 col-span-2">
+                                        <input type="checkbox" name="is_active" {{if $rule.IsActive}}checked{{end}} class="rounded border-gray-600 bg-gray-900"> Active
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <textarea name="response_headers" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{$rule.ResponseHeaders}}</textarea>
+                                <textarea name="response_body" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{$rule.ResponseBody}}</textarea>
+                            </div>
+
+                            <div class="flex justify-end">
+                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded text-xs font-medium transition">Save Rule</button>
+                            </div>
+                        </form>
+                        {{end}}
+                    </div>
+                    {{else}}
+                    <div class="text-xs text-gray-500">No mock rules yet.</div>
+                    {{end}}
+                </div>
+            </details>
         </article>
         {{end}}
     </div>
@@ -170,6 +380,28 @@ async function clearLogs(id) {
     }
 
     await window.appAlert('Logs cleared', 'Done');
+}
+
+async function deleteMockRule(endpointId, mockId) {
+    const proceed = await window.appConfirm('Delete this mock rule?', 'Delete Mock Rule');
+    if (!proceed) return;
+
+    const res = await apiFetch('/endpoints/' + endpointId + '/mocks/' + mockId, { method: 'DELETE' });
+    if (!res.ok) {
+        await window.appAlert('No se pudo eliminar la regla mock.', 'Error');
+        return;
+    }
+
+    window.location.reload();
+}
+
+async function toggleMockRule(endpointId, mockId) {
+    const res = await apiFetch('/endpoints/' + endpointId + '/mocks/' + mockId + '/toggle', { method: 'POST' });
+    if (!res.ok) {
+        await window.appAlert('No se pudo cambiar el estado de la regla mock.', 'Error');
+        return;
+    }
+    window.location.reload();
 }
 
 (() => {
@@ -259,6 +491,9 @@ async function clearLogs(id) {
     if (window.liveUpdates && window.liveUpdates.start) {
         const live = window.liveUpdates.start();
         live.on('endpoint_changed', function () {
+            scheduleRefresh();
+        });
+        live.on('mock_changed', function () {
             scheduleRefresh();
         });
     }
