@@ -81,7 +81,6 @@ func main() {
 
 		// SSE
 		auth.GET("/events", handlers.SSEStream)
-		auth.GET("/events/poll", handlers.EventsPoll)
 	}
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)

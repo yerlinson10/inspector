@@ -79,6 +79,22 @@
         .menu-open {
             overflow: hidden;
         }
+
+        .modal-open {
+            overflow: hidden;
+            padding-right: var(--modal-scrollbar-offset, 0px);
+        }
+
+        .app-modal-backdrop {
+            background: rgba(2, 6, 23, 0.72);
+            backdrop-filter: blur(4px);
+        }
+
+        .app-modal-panel {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.9));
+            border: 1px solid rgba(71, 85, 105, 0.9);
+            box-shadow: 0 28px 60px rgba(0, 0, 0, 0.45);
+        }
     </style>
 </head>
 <body class="app-bg text-gray-100 min-h-screen">
@@ -121,22 +137,6 @@
 
         <div id="sidebar-overlay" class="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm hidden lg:hidden"></div>
 
-        <div id="app-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
-            <div id="app-modal-backdrop" class="absolute inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
-            <div class="relative w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
-                <div class="px-5 py-4 border-b border-slate-700">
-                    <h3 id="app-modal-title" class="text-lg font-semibold text-slate-100">Notice</h3>
-                </div>
-                <div class="px-5 py-4">
-                    <p id="app-modal-message" class="text-slate-300"></p>
-                </div>
-                <div class="px-5 py-4 border-t border-slate-700 flex items-center justify-end gap-2">
-                    <button id="app-modal-cancel" type="button" class="hidden rounded-lg border border-slate-600 px-3 py-2 text-slate-200 hover:bg-slate-800 transition">Cancel</button>
-                    <button id="app-modal-ok" type="button" class="rounded-lg bg-emerald-600 px-3 py-2 text-white hover:bg-emerald-500 transition">OK</button>
-                </div>
-            </div>
-        </div>
-
         <div class="flex-1 lg:ml-0 min-w-0">
             <main class="w-full p-4 md:p-7 lg:p-8">
                 <div class="mx-auto w-full max-w-7xl">
@@ -151,73 +151,134 @@
         </div>
     </div>
 
+    <div id="app-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 app-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="app-modal-title" aria-describedby="app-modal-message">
+        <div class="app-modal-panel w-full max-w-md rounded-2xl p-5 md:p-6">
+            <h2 id="app-modal-title" class="text-lg font-semibold text-emerald-300">Aviso</h2>
+            <p id="app-modal-message" class="mt-3 text-sm text-slate-200 whitespace-pre-wrap"></p>
+            <div class="mt-6 flex items-center justify-end gap-2">
+                <button id="app-modal-cancel" type="button" class="hidden px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700 transition">Cancelar</button>
+                <button id="app-modal-ok" type="button" class="px-3 py-2 rounded-lg border border-emerald-500/50 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 transition">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Global fallback helpers used across templates.
         (function () {
             const modal = document.getElementById('app-modal');
-            const backdrop = document.getElementById('app-modal-backdrop');
-            const titleEl = document.getElementById('app-modal-title');
-            const messageEl = document.getElementById('app-modal-message');
-            const okBtn = document.getElementById('app-modal-ok');
-            const cancelBtn = document.getElementById('app-modal-cancel');
+            const modalTitle = document.getElementById('app-modal-title');
+            const modalMessage = document.getElementById('app-modal-message');
+            const okButton = document.getElementById('app-modal-ok');
+            const cancelButton = document.getElementById('app-modal-cancel');
 
-            function openModal(opts) {
-                if (!modal || !titleEl || !messageEl || !okBtn || !cancelBtn) {
+            if (!modal || !modalTitle || !modalMessage || !okButton || !cancelButton) {
+                window.appAlert = function (message, title) {
+                    const prefix = title ? '[' + title + '] ' : '';
+                    console.warn(prefix + (message || ''));
+                    return Promise.resolve();
+                };
+
+                window.appConfirm = function (message, title) {
+                    const prefix = title ? '[' + title + '] ' : '';
+                    console.warn(prefix + (message || ''));
                     return Promise.resolve(false);
+                };
+                return;
+            }
+
+            let isOpen = false;
+            let activeResolve = null;
+
+            function closeModal(value) {
+                if (!isOpen) return;
+                isOpen = false;
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('--modal-scrollbar-offset');
+                document.removeEventListener('keydown', onEscClose);
+
+                if (activeResolve) {
+                    const resolve = activeResolve;
+                    activeResolve = null;
+                    resolve(value);
+                }
+            }
+
+            function onEscClose(event) {
+                if (event.key === 'Escape') {
+                    closeModal(false);
+                }
+            }
+
+            function openModal(options) {
+                const title = options.title || 'Aviso';
+                const message = options.message || '';
+                const isConfirm = options.isConfirm === true;
+                const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+                if (isOpen && activeResolve) {
+                    activeResolve(false);
+                    activeResolve = null;
                 }
 
-                titleEl.textContent = opts.title || 'Notice';
-                messageEl.textContent = opts.message || '';
-                okBtn.textContent = opts.okText || 'OK';
-                cancelBtn.textContent = opts.cancelText || 'Cancel';
-
-                if (opts.type === 'confirm') {
-                    cancelBtn.classList.remove('hidden');
-                } else {
-                    cancelBtn.classList.add('hidden');
-                }
+                isOpen = true;
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+                cancelButton.classList.toggle('hidden', !isConfirm);
+                okButton.textContent = isConfirm ? 'Confirmar' : 'Aceptar';
 
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
+                if (scrollbarWidth > 0) {
+                    document.body.style.setProperty('--modal-scrollbar-offset', scrollbarWidth + 'px');
+                }
+                document.body.classList.add('modal-open');
+                document.addEventListener('keydown', onEscClose);
+
+                setTimeout(function () {
+                    if (isConfirm) {
+                        cancelButton.focus();
+                    } else {
+                        okButton.focus();
+                    }
+                }, 0);
 
                 return new Promise(function (resolve) {
-                    const onOk = function () {
-                        cleanup();
-                        resolve(true);
-                    };
-
-                    const onCancel = function () {
-                        cleanup();
-                        resolve(false);
-                    };
-
-                    const onKeyDown = function (event) {
-                        if (event.key === 'Escape') {
-                            onCancel();
-                        }
-                    };
-
-                    function cleanup() {
-                        okBtn.removeEventListener('click', onOk);
-                        cancelBtn.removeEventListener('click', onCancel);
-                        if (backdrop) backdrop.removeEventListener('click', onCancel);
-                        document.removeEventListener('keydown', onKeyDown);
-                        modal.classList.add('hidden');
-                        modal.classList.remove('flex');
-                    }
-
-                    okBtn.addEventListener('click', onOk);
-                    cancelBtn.addEventListener('click', onCancel);
-                    if (backdrop) backdrop.addEventListener('click', onCancel);
-                    document.addEventListener('keydown', onKeyDown);
+                    activeResolve = resolve;
                 });
             }
 
+            modal.addEventListener('click', function (event) {
+                if (event.target === modal) {
+                    closeModal(false);
+                }
+            });
+
+            okButton.addEventListener('click', function () {
+                closeModal(true);
+            });
+
+            cancelButton.addEventListener('click', function () {
+                closeModal(false);
+            });
+
             window.appAlert = function (message, title) {
-                return openModal({ type: 'alert', message: message, title: title || 'Notice', okText: 'OK' });
+                return openModal({
+                    message: message,
+                    title: title,
+                    isConfirm: false
+                }).then(function () {
+                    return undefined;
+                });
             };
 
             window.appConfirm = function (message, title) {
-                return openModal({ type: 'confirm', message: message, title: title || 'Confirm', okText: 'Continue', cancelText: 'Cancel' });
+                return openModal({
+                    message: message,
+                    title: title,
+                    isConfirm: true
+                });
             };
         })();
 
@@ -311,120 +372,6 @@
                     }
                 });
             });
-        })();
-
-        (function () {
-            function createLiveUpdates(options) {
-                const opts = options || {};
-                const listeners = {};
-                let sinceRequestId = Number(opts.initialRequestId || 0);
-                let sinceSentRequestId = Number(opts.initialSentRequestId || 0);
-                let pollBusy = false;
-                let closed = false;
-
-                const pollIntervalMs = Number(opts.pollIntervalMs || 1500);
-                const pollLimit = Number(opts.pollLimit || 100);
-
-                function emit(type, payload) {
-                    const handlers = listeners[type] || [];
-                    handlers.forEach(function (fn) {
-                        try {
-                            fn(payload);
-                        } catch (_) {}
-                    });
-                }
-
-                function on(type, fn) {
-                    if (!listeners[type]) listeners[type] = [];
-                    listeners[type].push(fn);
-                    return function off() {
-                        listeners[type] = (listeners[type] || []).filter(function (cb) {
-                            return cb !== fn;
-                        });
-                    };
-                }
-
-                function handleEvent(msg) {
-                    if (!msg || !msg.type) return;
-                    if (msg.type === 'new_request' && msg.data) {
-                        const reqId = Number(msg.data.id || 0);
-                        if (reqId > 0 && reqId <= sinceRequestId) return;
-                        if (reqId > sinceRequestId) sinceRequestId = reqId;
-                    }
-                    if (msg.type === 'new_sent_request' && msg.data) {
-                        const sentId = Number(msg.data.id || 0);
-                        if (sentId > 0 && sentId <= sinceSentRequestId) return;
-                        if (sentId > sinceSentRequestId) sinceSentRequestId = sentId;
-                    }
-                    emit(msg.type, msg.data || {});
-                }
-
-                function startSSE() {
-                    if (!window.EventSource) return null;
-                    const sse = new EventSource('/events');
-                    sse.onmessage = function (event) {
-                        try {
-                            handleEvent(JSON.parse(event.data));
-                        } catch (_) {}
-                    };
-                    return sse;
-                }
-
-                async function runPoll() {
-                    if (pollBusy || closed) return;
-                    pollBusy = true;
-                    try {
-                        const query = new URLSearchParams({
-                            since_request_id: String(sinceRequestId),
-                            since_sent_request_id: String(sinceSentRequestId),
-                            limit: String(pollLimit)
-                        });
-                        const res = await fetch('/events/poll?' + query.toString(), {
-                            method: 'GET',
-                            cache: 'no-store',
-                            credentials: 'same-origin'
-                        });
-                        if (!res.ok) return;
-                        const data = await res.json();
-
-                        const requests = Array.isArray(data.new_requests) ? data.new_requests : [];
-                        const sent = Array.isArray(data.new_sent_requests) ? data.new_sent_requests : [];
-
-                        requests.forEach(function (req) {
-                            handleEvent({ type: 'new_request', data: req });
-                        });
-
-                        sent.forEach(function (evt) {
-                            handleEvent({ type: 'new_sent_request', data: evt });
-                        });
-
-                        const latestReq = Number(data.latest_request_id || 0);
-                        const latestSent = Number(data.latest_sent_request_id || 0);
-                        if (latestReq > sinceRequestId) sinceRequestId = latestReq;
-                        if (latestSent > sinceSentRequestId) sinceSentRequestId = latestSent;
-                    } catch (_) {
-                    } finally {
-                        pollBusy = false;
-                    }
-                }
-
-                const sse = startSSE();
-                runPoll();
-                const pollTimer = setInterval(runPoll, pollIntervalMs);
-
-                return {
-                    on: on,
-                    close: function () {
-                        closed = true;
-                        clearInterval(pollTimer);
-                        if (sse) sse.close();
-                    }
-                };
-            }
-
-            window.liveUpdates = {
-                start: createLiveUpdates
-            };
         })();
     </script>
 </body>
