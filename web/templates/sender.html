@@ -1,6 +1,12 @@
 {{define "content"}}
 <h2 class="text-2xl font-bold mb-6">Send HTTP Request</h2>
 
+{{if .replay_source_id}}
+<div class="bg-blue-900/30 border border-blue-600 text-blue-200 px-4 py-3 rounded mb-4">
+    Replay cargado desde request #{{.replay_source_id}}. Puedes ajustar URL, headers o body antes de enviar.
+</div>
+{{end}}
+
 {{if .success}}
 <div class="bg-emerald-900/30 border border-emerald-600 text-emerald-200 px-4 py-3 rounded mb-4">
     Request sent successfully! Status: {{.response_status}} ({{.duration}}ms)
@@ -12,6 +18,7 @@
     <!-- Request Form -->
     <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
         <form method="POST" action="/send/http">
+            <input type="hidden" name="csrf_token" value="{{.csrfToken}}">
             <div class="space-y-4">
                 <div class="flex gap-3">
                     <div class="w-32">
@@ -32,8 +39,8 @@
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">Type</label>
                     <select name="type" class="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
-                        <option value="http">HTTP</option>
-                        <option value="webhook">Webhook</option>
+                        <option value="http" {{if eq .type "http"}}selected{{end}}>HTTP</option>
+                        <option value="webhook" {{if eq .type "webhook"}}selected{{end}}>Webhook</option>
                     </select>
                 </div>
                 <div>

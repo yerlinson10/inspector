@@ -1,6 +1,6 @@
 {{define "layout.html"}}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -279,6 +279,57 @@
                     title: title,
                     isConfirm: true
                 });
+            };
+        })();
+
+        (function () {
+            function readCookie(name) {
+                const prefix = name + '=';
+                const parts = document.cookie ? document.cookie.split(';') : [];
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i].trim();
+                    if (part.startsWith(prefix)) {
+                        return decodeURIComponent(part.substring(prefix.length));
+                    }
+                }
+                return '';
+            }
+
+            function csrfToken() {
+                return readCookie('inspector_csrf');
+            }
+
+            function appendCSRFToken(form) {
+                if (!(form instanceof HTMLFormElement)) return;
+                const method = (form.getAttribute('method') || 'GET').toUpperCase();
+                if (method === 'GET') return;
+                const token = csrfToken();
+                if (!token) return;
+
+                let input = form.querySelector('input[name="csrf_token"]');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrf_token';
+                    form.appendChild(input);
+                }
+                input.value = token;
+            }
+
+            document.addEventListener('submit', function (event) {
+                appendCSRFToken(event.target);
+            }, true);
+
+            window.csrfToken = csrfToken;
+            window.csrfFetch = function (resource, init) {
+                const options = init ? Object.assign({}, init) : {};
+                const headers = new Headers(options.headers || {});
+                const token = csrfToken();
+                if (token && !headers.has('X-CSRF-Token')) {
+                    headers.set('X-CSRF-Token', token);
+                }
+                options.headers = headers;
+                return fetch(resource, options);
             };
         })();
 

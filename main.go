@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"inspector/internal/config"
 	"inspector/internal/handlers"
@@ -28,15 +30,46 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	if isDefaultCredentials(cfg) {
+		if isProductionEnvironment() && os.Getenv("INSPECTOR_ALLOW_DEFAULT_AUTH") != "1" {
+			log.Fatalf("Refusing to start with default credentials in production. Update auth.username and auth.password in config.")
+		}
+		log.Printf("WARNING: running with default credentials. Change auth.username/auth.password before exposing publicly.")
+	}
+
 	// Init database
 	if err := storage.Init(cfg.Database.Path); err != nil {
 		log.Fatalf("Failed to init database: %v", err)
 	}
 
+	handlers.ConfigureRuntime(handlers.RuntimeConfig{
+		MaxRequests:          cfg.Settings.MaxRequests,
+		MaxRequestBodyBytes:  cfg.Settings.MaxRequestBodyBytes,
+		MaxResponseBodyBytes: cfg.Settings.MaxResponseBodyBytes,
+		AllowedWSOrigins:     cfg.Settings.AllowedWSOrigins,
+		RedactionEnabled:     cfg.Settings.RedactionEnabled,
+		RedactionHeaders:     cfg.Settings.RedactionHeaders,
+		RedactionFields:      cfg.Settings.RedactionFields,
+		AlertWebhookURL:      cfg.Settings.AlertWebhookURL,
+		AlertMinSentStatus:   cfg.Settings.AlertMinSentStatus,
+		AlertOnSentError:     cfg.Settings.AlertOnSentError,
+	})
+
+	cleanupInterval := time.Duration(cfg.Settings.CleanupIntervalSeconds) * time.Second
+	if cleanupInterval <= 0 {
+		cleanupInterval = 30 * time.Second
+	}
+	storage.Cleanup(cfg.Settings.MaxRequests)
+	stopCleanup := storage.StartCleanupWorker(cfg.Settings.MaxRequests, cleanupInterval)
+	defer stopCleanup()
+
 	// Setup Gin
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
-	authHandler := handlers.NewAuthHandler(cfg.Auth.Username, cfg.Auth.Password)
+	r.Use(middleware.SecurityHeaders())
+
+	sessionTTL := time.Duration(cfg.Settings.SessionTTLHours) * time.Hour
+	authHandler := handlers.NewAuthHandler(cfg.Auth.Username, cfg.Auth.Password, sessionTTL)
 
 	r.HTMLRender = buildRenderer()
 
@@ -51,7 +84,7 @@ func main() {
 	r.GET("/logout", authHandler.Logout)
 
 	// Authenticated routes
-	auth := r.Group("/", middleware.SessionAuth(authHandler.SessionValue))
+	auth := r.Group("/", middleware.SessionAuth(authHandler.ValidateSession), middleware.CSRFProtection())
 	{
 		auth.GET("/", func(c *gin.Context) {
 			c.Redirect(302, "/dashboard")
@@ -60,6 +93,7 @@ func main() {
 
 		// Requests
 		auth.GET("/requests", handlers.ListRequests)
+		auth.GET("/requests/diff", handlers.RequestDiff)
 		auth.GET("/requests/:id", handlers.RequestDetail)
 
 		// Endpoints CRUD
@@ -82,16 +116,28 @@ func main() {
 		// SSE + WS live updates (WS preferred behind tunnels/proxies)
 		auth.GET("/events", handlers.SSEStream)
 		auth.GET("/events/ws", handlers.EventsWebSocket)
+		auth.GET("/events/poll", handlers.EventsPoll)
 	}
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("Inspector running on http://%s", addr)
-	log.Printf("Auth: %s / %s", cfg.Auth.Username, cfg.Auth.Password)
+	log.Printf("Auth user: %s", cfg.Auth.Username)
 	log.Printf("Public endpoints: http://%s/in/<slug>", addr)
 
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
+}
+
+func isDefaultCredentials(cfg *config.Config) bool {
+	if cfg == nil {
+		return false
+	}
+	return strings.TrimSpace(cfg.Auth.Username) == "admin" && strings.TrimSpace(cfg.Auth.Password) == "inspector123"
+}
+
+func isProductionEnvironment() bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("INSPECTOR_ENV")), "production")
 }
 
 func buildRenderer() multitemplate.Renderer {
@@ -104,6 +150,7 @@ func buildRenderer() multitemplate.Renderer {
 		"dashboard.html",
 		"endpoints.html",
 		"requests.html",
+		"request_diff.html",
 		"request_detail.html",
 		"sender.html",
 		"ws_client.html",

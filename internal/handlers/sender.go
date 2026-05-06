@@ -3,8 +3,12 @@ package handlers
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -18,10 +22,32 @@ import (
 )
 
 func SenderPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "sender.html", gin.H{
+	data := gin.H{
 		"ContentTemplate": "sender_content",
 		"title":           "Send Request",
-	})
+		"type":            "http",
+	}
+
+	if replayID := strings.TrimSpace(c.Query("replay")); replayID != "" {
+		var captured models.RequestLog
+		if err := storage.DB.First(&captured, replayID).Error; err != nil {
+			data["error"] = "Request para replay no encontrado"
+		} else {
+			method := strings.ToUpper(strings.TrimSpace(captured.Method))
+			if method == "" || method == "WS" {
+				method = http.MethodPost
+			}
+
+			data["method"] = method
+			data["type"] = replayTypeFromCaptured(captured.Type)
+			data["headers"] = replayHeadersForSender(captured.Headers)
+			data["body"] = captured.Body
+			data["url"] = requestBaseURL(c) + captured.Path + replayQuerySuffix(captured.QueryParams)
+			data["replay_source_id"] = captured.ID
+		}
+	}
+
+	c.HTML(http.StatusOK, "sender.html", withViewData(c, data))
 }
 
 func SendHTTP(c *gin.Context) {
@@ -32,16 +58,44 @@ func SendHTTP(c *gin.Context) {
 	reqType := c.DefaultPostForm("type", "http")
 
 	if url == "" {
-		c.HTML(http.StatusBadRequest, "sender.html", gin.H{
+		c.HTML(http.StatusBadRequest, "sender.html", withViewData(c, gin.H{
 			"ContentTemplate": "sender_content",
 			"error":           "URL is required",
 			"title":           "Send Request",
-		})
+			"type":            reqType,
+		}))
+		return
+	}
+
+	if err := ValidateHTTPOutboundURL(url); err != nil {
+		c.HTML(http.StatusBadRequest, "sender.html", withViewData(c, gin.H{
+			"ContentTemplate": "sender_content",
+			"error":           "Blocked target URL: " + err.Error(),
+			"title":           "Send Request",
+			"method":          method,
+			"url":             url,
+			"headers":         headersRaw,
+			"body":            body,
+			"type":            reqType,
+		}))
 		return
 	}
 
 	if method == "" {
 		method = "GET"
+	}
+	if !isAllowedHTTPMethod(method) {
+		c.HTML(http.StatusBadRequest, "sender.html", withViewData(c, gin.H{
+			"ContentTemplate": "sender_content",
+			"error":           "Unsupported HTTP method",
+			"title":           "Send Request",
+			"method":          method,
+			"url":             url,
+			"headers":         headersRaw,
+			"body":            body,
+			"type":            reqType,
+		}))
+		return
 	}
 
 	// Build request
@@ -53,13 +107,16 @@ func SendHTTP(c *gin.Context) {
 	httpReq, err := http.NewRequest(method, url, reqBody)
 	if err != nil {
 		saveSentRequest(reqType, method, url, headersRaw, body, 0, "", "", 0, err.Error())
-		c.HTML(http.StatusOK, "sender.html", gin.H{
+		c.HTML(http.StatusOK, "sender.html", withViewData(c, gin.H{
 			"ContentTemplate": "sender_content",
 			"error":           "Failed to create request: " + err.Error(),
 			"title":           "Send Request",
 			"method":          method,
 			"url":             url,
-		})
+			"headers":         headersRaw,
+			"body":            body,
+			"type":            reqType,
+		}))
 		return
 	}
 
@@ -94,53 +151,148 @@ func SendHTTP(c *gin.Context) {
 
 	if err != nil {
 		saveSentRequest(reqType, method, url, headersRaw, body, 0, "", "", duration, err.Error())
-		c.HTML(http.StatusOK, "sender.html", gin.H{
+		c.HTML(http.StatusOK, "sender.html", withViewData(c, gin.H{
 			"ContentTemplate": "sender_content",
 			"error":           "Request failed: " + err.Error(),
 			"title":           "Send Request",
 			"method":          method,
 			"url":             url,
+			"headers":         headersRaw,
+			"body":            body,
+			"type":            reqType,
 			"duration":        duration,
-		})
+		}))
 		return
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	maxRespBody := maxResponseBodyBytes()
+	respReader := io.Reader(resp.Body)
+	if maxRespBody > 0 {
+		respReader = io.LimitReader(resp.Body, maxRespBody+1)
+	}
+
+	respBody, readErr := io.ReadAll(respReader)
+	if readErr != nil {
+		saveSentRequest(reqType, method, url, headersRaw, body, resp.StatusCode, "", "", duration, "failed to read response body")
+		c.HTML(http.StatusOK, "sender.html", withViewData(c, gin.H{
+			"ContentTemplate": "sender_content",
+			"error":           "Failed to read response body",
+			"title":           "Send Request",
+			"method":          method,
+			"url":             url,
+			"headers":         headersRaw,
+			"body":            body,
+			"type":            reqType,
+			"duration":        duration,
+		}))
+		return
+	}
+
+	if maxRespBody > 0 && int64(len(respBody)) > maxRespBody {
+		truncated := string(respBody[:maxRespBody])
+		respHeaders, _ := json.Marshal(resp.Header)
+		errMsg := fmt.Sprintf("response body exceeded %d bytes and was truncated", maxRespBody)
+		sent := saveSentRequest(reqType, method, url, headersRaw, body, resp.StatusCode, string(respHeaders), truncated, duration, errMsg)
+		c.HTML(http.StatusOK, "sender.html", withViewData(c, gin.H{
+			"ContentTemplate": "sender_content",
+			"error":           errMsg,
+			"title":           "Send Request",
+			"method":          method,
+			"url":             url,
+			"headers":         headersRaw,
+			"body":            body,
+			"type":            reqType,
+			"response_status": resp.StatusCode,
+			"response_body":   truncated,
+			"duration":        duration,
+			"sent_id":         sent.ID,
+		}))
+		return
+	}
+
 	respHeaders, _ := json.Marshal(resp.Header)
 
 	sent := saveSentRequest(reqType, method, url, headersRaw, body, resp.StatusCode, string(respHeaders), string(respBody), duration, "")
 
-	c.HTML(http.StatusOK, "sender.html", gin.H{
+	c.HTML(http.StatusOK, "sender.html", withViewData(c, gin.H{
 		"ContentTemplate": "sender_content",
 		"title":           "Send Request",
 		"method":          method,
 		"url":             url,
 		"headers":         headersRaw,
 		"body":            body,
+		"type":            reqType,
 		"response_status": resp.StatusCode,
 		"response_body":   string(respBody),
 		"duration":        duration,
 		"sent_id":         sent.ID,
 		"success":         true,
-	})
+	}))
 }
 
 func SentHistory(c *gin.Context) {
+	reqType := strings.TrimSpace(c.Query("type"))
+	method := strings.ToUpper(strings.TrimSpace(c.Query("method")))
+	statusFilter := strings.TrimSpace(c.Query("status"))
+	searchQuery := strings.TrimSpace(c.Query("q"))
+	fromRaw := strings.TrimSpace(c.Query("from"))
+	toRaw := strings.TrimSpace(c.Query("to"))
+
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	if page < 1 {
 		page = 1
 	}
 	perPage := 50
 
+	query := storage.DB.Model(&models.SentRequest{})
+	if reqType != "" {
+		query = query.Where("type = ?", reqType)
+	}
+	if method != "" {
+		query = query.Where("method = ?", method)
+	}
+	if statusFilter != "" {
+		if strings.EqualFold(statusFilter, "error") {
+			query = query.Where("error <> ''")
+		} else if parsedStatus, err := strconv.Atoi(statusFilter); err == nil {
+			query = query.Where("response_status = ?", parsedStatus)
+		}
+	}
+	if searchQuery != "" {
+		like := "%" + searchQuery + "%"
+		query = query.Where("url LIKE ? OR headers LIKE ? OR body LIKE ? OR response_body LIKE ? OR error LIKE ?", like, like, like, like, like)
+	}
+	if fromTime, ok := parseTimeFilter(fromRaw, false); ok {
+		query = query.Where("created_at >= ?", fromTime)
+	}
+	if toTime, ok := parseTimeFilter(toRaw, true); ok {
+		query = query.Where("created_at <= ?", toTime)
+	}
+
 	var total int64
-	storage.DB.Model(&models.SentRequest{}).Count(&total)
+	query.Count(&total)
 
 	var requests []models.SentRequest
-	storage.DB.Order("created_at DESC").
+	query.Order("created_at DESC").
 		Offset((page - 1) * perPage).
 		Limit(perPage).
 		Find(&requests)
+
+	var methodOptions []string
+	storage.DB.Model(&models.SentRequest{}).
+		Distinct("method").
+		Order("method ASC").
+		Pluck("method", &methodOptions)
+
+	filterQuery := buildFilterQuery(map[string]string{
+		"type":   reqType,
+		"method": method,
+		"status": statusFilter,
+		"q":      searchQuery,
+		"from":   fromRaw,
+		"to":     toRaw,
+	})
 
 	var latestSentID uint
 	if len(requests) > 0 {
@@ -152,15 +304,23 @@ func SentHistory(c *gin.Context) {
 		totalPages++
 	}
 
-	c.HTML(http.StatusOK, "sent_history.html", gin.H{
+	c.HTML(http.StatusOK, "sent_history.html", withViewData(c, gin.H{
 		"ContentTemplate": "sent_history_content",
 		"requests":        requests,
+		"methodOptions":   methodOptions,
+		"currentType":     reqType,
+		"currentMethod":   method,
+		"currentStatus":   statusFilter,
+		"currentQuery":    searchQuery,
+		"currentFrom":     fromRaw,
+		"currentTo":       toRaw,
+		"filterQuery":     filterQuery,
 		"page":            page,
 		"totalPages":      totalPages,
 		"total":           total,
 		"latestSentID":    latestSentID,
 		"title":           "Sent History",
-	})
+	}))
 }
 
 func SentDetail(c *gin.Context) {
@@ -172,24 +332,28 @@ func SentDetail(c *gin.Context) {
 		return
 	}
 
-	c.HTML(http.StatusOK, "sent_detail.html", gin.H{
+	c.HTML(http.StatusOK, "sent_detail.html", withViewData(c, gin.H{
 		"ContentTemplate": "sent_detail_content",
 		"request":         req,
 		"title":           "Sent Request #" + id,
-	})
+	}))
 }
 
 func WSClientPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "ws_client.html", gin.H{
+	c.HTML(http.StatusOK, "ws_client.html", withViewData(c, gin.H{
 		"ContentTemplate": "ws_client_content",
 		"title":           "WebSocket Client",
-	})
+	}))
 }
 
 func WSProxy(c *gin.Context) {
 	targetURL := c.Query("url")
 	if targetURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "url parameter required"})
+		return
+	}
+	if err := ValidateWSOutboundURL(targetURL); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "blocked target URL: " + err.Error()})
 		return
 	}
 
@@ -218,7 +382,9 @@ func WSProxy(c *gin.Context) {
 		URL:       targetURL,
 		CreatedAt: time.Now(),
 	}
-	storage.DB.Create(&sentReq)
+	if err := storage.DB.Create(&sentReq).Error; err != nil {
+		log.Printf("failed to persist websocket proxy session: %v", err)
+	}
 
 	done := make(chan struct{})
 
@@ -264,7 +430,14 @@ func saveSentRequest(reqType, method, url, headers, body string, status int, res
 		Error:           errMsg,
 		CreatedAt:       time.Now(),
 	}
-	storage.DB.Create(&sent)
+	sent = redactSentRequest(sent)
+
+	if err := storage.DB.Create(&sent).Error; err != nil {
+		log.Printf("failed to persist sent request: %v", err)
+		return sent
+	}
+
+	triggerSentRequestAlert(sent)
 
 	broadcaster.DefaultHub.Broadcast(broadcaster.Event{
 		Type: "new_sent_request",
@@ -281,4 +454,73 @@ func saveSentRequest(reqType, method, url, headers, body string, status int, res
 	})
 
 	return sent
+}
+
+func replayTypeFromCaptured(capturedType string) string {
+	if strings.EqualFold(strings.TrimSpace(capturedType), "webhook") {
+		return "webhook"
+	}
+	return "http"
+}
+
+func replayHeadersForSender(rawHeaders string) string {
+	trimmed := strings.TrimSpace(rawHeaders)
+	if trimmed == "" {
+		return ""
+	}
+
+	var multi map[string][]string
+	if err := json.Unmarshal([]byte(trimmed), &multi); err == nil {
+		keys := make([]string, 0, len(multi))
+		for k := range multi {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		lines := make([]string, 0, len(keys))
+		for _, key := range keys {
+			values := multi[key]
+			for _, v := range values {
+				lines = append(lines, key+": "+v)
+			}
+		}
+		return strings.Join(lines, "\n")
+	}
+
+	return trimmed
+}
+
+func replayQuerySuffix(rawQuery string) string {
+	trimmed := strings.TrimSpace(rawQuery)
+	if trimmed == "" {
+		return ""
+	}
+
+	var queryMap map[string][]string
+	if err := json.Unmarshal([]byte(trimmed), &queryMap); err != nil {
+		return ""
+	}
+
+	values := url.Values{}
+	for key, list := range queryMap {
+		for _, val := range list {
+			values.Add(key, val)
+		}
+	}
+
+	encoded := values.Encode()
+	if encoded == "" {
+		return ""
+	}
+
+	return "?" + encoded
+}
+
+func isAllowedHTTPMethod(method string) bool {
+	switch strings.ToUpper(strings.TrimSpace(method)) {
+	case http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodHead, http.MethodOptions:
+		return true
+	default:
+		return false
+	}
 }

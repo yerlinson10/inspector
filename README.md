@@ -10,10 +10,13 @@ Inspector es una herramienta de desarrollo escrita en Go para inspeccionar, depu
 - **Recepción de WebSocket** — Cada endpoint también expone `ws://.../in/:slug/ws` para capturar mensajes WebSocket.
 - **Dashboard en tiempo real** — Feed en vivo con Server-Sent Events (SSE): las nuevas peticiones aparecen sin recargar la página.
 - **Historial de peticiones** — Listado filtrable y paginado de todas las peticiones recibidas, con vista de detalle completa.
+- **Comparador de peticiones** — Vista `/requests/diff` para comparar dos capturas por método, path, headers, query y body.
 - **Gestor de Endpoints** — CRUD completo: crear, editar, eliminar y limpiar el historial de cada endpoint.
 - **Enviador HTTP** — Construye y envía peticiones HTTP personalizadas (método, URL, cabeceras, cuerpo) con registro del resultado.
 - **Cliente WebSocket** — Conéctate a cualquier servidor WebSocket, envía mensajes y visualiza la conversación en tiempo real.
-- **Historial de envíos** — Registro de todas las peticiones salientes con duración, código de estado y respuesta.
+- **Historial de envíos avanzado** — Registro de salidas con filtros por tipo, método, estado, texto y rango de fechas.
+- **Redacción de datos sensibles** — Oculta valores sensibles en headers/body/query antes de persistir en base de datos.
+- **Alertas de fallos salientes** — Webhook opcional cuando un envío falla o devuelve estado crítico.
 - **Autenticación por sesión** — Login con formulario y cookie de sesión. Sin popups del navegador.
 - **Auto-purga** — Limpieza automática de registros antiguos según `max_requests` en la configuración.
 - **Sin CGO** — SQLite embebido mediante driver puro en Go (`glebarez/sqlite`). No requiere bibliotecas C externas.
@@ -238,8 +241,40 @@ database:
   path: "./inspector.db"   # Ruta al archivo SQLite
 
 settings:
-  max_requests: 10000   # Máximo de peticiones almacenadas por endpoint (auto-purga)
+  max_requests: 10000               # Máximo de peticiones almacenadas (auto-purga)
+  max_request_body_bytes: 1048576   # Límite de payload entrante en /in/:slug (1MB)
+  max_response_body_bytes: 2097152  # Límite de body leído por Sender (2MB)
+  cleanup_interval_seconds: 30      # Frecuencia del worker de limpieza
+  session_ttl_hours: 12             # TTL de sesión autenticada
+  allowed_ws_origins: []            # Origins permitidos para WS (vacío = same-origin + clientes sin Origin)
+  redaction_enabled: true           # Habilita redacción de campos sensibles al guardar logs
+  redaction_headers:                # Headers a redactar (case-insensitive)
+    - authorization
+    - cookie
+    - x-api-key
+    - x-auth-token
+  redaction_fields:                 # Claves sensibles en body/query JSON o texto
+    - password
+    - token
+    - secret
+    - api_key
+  alert_webhook_url: ""            # URL opcional para recibir alertas de envíos críticos
+  alert_min_sent_status: 500        # Umbral mínimo de status HTTP para alertar
+  alert_on_sent_error: true         # Alertar también cuando hay error de red/timeout
 ```
+
+### Filtros avanzados
+
+- `GET /requests` soporta: `type`, `endpoint`, `method`, `q`, `from`, `to`, `page`
+- `GET /send/history` soporta: `type`, `method`, `status` (ej: `200` o `error`), `q`, `from`, `to`, `page`
+
+### Redacción y alertas
+
+- La redacción se aplica al persistir eventos entrantes y salientes.
+- Los campos definidos en `redaction_headers` y `redaction_fields` se guardan como `***REDACTED***`.
+- Si `alert_webhook_url` está configurado, Inspector envía un POST JSON al webhook cuando:
+  - hay error saliente (si `alert_on_sent_error: true`), o
+  - `response_status >= alert_min_sent_status`.
 
 Se puede pasar un archivo de configuración alternativo como argumento:
 
@@ -326,7 +361,8 @@ curl -X POST http://localhost:9090/in/mi-endpoint \
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | `GET` | `/dashboard` | Dashboard principal con endpoints y live feed |
-| `GET` | `/requests` | Listado de peticiones recibidas (soporta `?slug=`, `?type=`, `?page=`) |
+| `GET` | `/requests` | Listado de peticiones recibidas (filtros: `type`, `endpoint`, `method`, `q`, `from`, `to`, `page`) |
+| `GET` | `/requests/diff` | Compara dos peticiones capturadas (`left`, `right`, `endpoint`) |
 | `GET` | `/requests/:id` | Detalle completo de una petición |
 
 #### Endpoints
@@ -346,7 +382,7 @@ curl -X POST http://localhost:9090/in/mi-endpoint \
 |--------|------|-------------|
 | `GET` | `/send` | Formulario para enviar peticiones HTTP |
 | `POST` | `/send/http` | Ejecuta el envío HTTP |
-| `GET` | `/send/history` | Historial de peticiones enviadas |
+| `GET` | `/send/history` | Historial de peticiones enviadas (filtros: `type`, `method`, `status`, `q`, `from`, `to`, `page`) |
 | `GET` | `/send/history/:id` | Detalle de una petición enviada |
 | `GET` | `/send/ws-client` | Página del cliente WebSocket |
 | `GET` | `/send/ws-proxy` | Proxy WebSocket para el cliente (upgrade) |
@@ -356,6 +392,8 @@ curl -X POST http://localhost:9090/in/mi-endpoint \
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | `GET` | `/events` | Stream SSE para actualizaciones en tiempo real |
+| `GET` | `/events/ws` | Stream de eventos en WebSocket (fallback recomendado tras túneles) |
+| `GET` | `/events/poll` | Polling JSON de eventos (compatibilidad) |
 
 ---
 

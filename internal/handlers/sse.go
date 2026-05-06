@@ -14,7 +14,7 @@ import (
 )
 
 var eventsWSUpgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: isAllowedWebSocketOrigin,
 }
 
 const (

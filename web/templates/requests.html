@@ -1,15 +1,14 @@
 {{define "content"}}
-<div class="flex justify-between items-center mb-6">
+<div class="flex justify-between items-center mb-6 gap-3 flex-wrap">
     <h2 class="text-2xl font-bold">Requests</h2>
     <span id="requests-total" class="text-gray-400">{{.total}} total</span>
 </div>
 
-<!-- Filters -->
 <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 mb-6">
-    <form method="GET" action="/requests" class="flex flex-wrap gap-4 items-end">
+    <form method="GET" action="/requests" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 items-end">
         <div>
             <label class="block text-sm text-gray-400 mb-1">Type</label>
-            <select name="type" class="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+            <select name="type" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                 <option value="">All</option>
                 <option value="http" {{if eq .currentType "http"}}selected{{end}}>HTTP</option>
                 <option value="webhook" {{if eq .currentType "webhook"}}selected{{end}}>Webhook</option>
@@ -18,19 +17,41 @@
         </div>
         <div>
             <label class="block text-sm text-gray-400 mb-1">Endpoint</label>
-            <select name="endpoint" class="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+            <select name="endpoint" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                 <option value="">All</option>
                 {{range .endpoints}}
                 <option value="{{.Slug}}" {{if eq $.currentSlug .Slug}}selected{{end}}>{{.Name}}</option>
                 {{end}}
             </select>
         </div>
-        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded font-medium transition">Filter</button>
-        <a href="/requests" class="text-gray-400 hover:text-gray-200 px-4 py-2">Reset</a>
+        <div>
+            <label class="block text-sm text-gray-400 mb-1">Method</label>
+            <select name="method" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                <option value="">All</option>
+                {{range .methodOptions}}
+                <option value="{{.}}" {{if eq $.currentMethod .}}selected{{end}}>{{.}}</option>
+                {{end}}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm text-gray-400 mb-1">Search</label>
+            <input type="text" name="q" value="{{.currentQuery}}" placeholder="endpoint, path, ip..." class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+        </div>
+        <div>
+            <label class="block text-sm text-gray-400 mb-1">From</label>
+            <input type="datetime-local" name="from" value="{{.currentFrom}}" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+        </div>
+        <div>
+            <label class="block text-sm text-gray-400 mb-1">To</label>
+            <input type="datetime-local" name="to" value="{{.currentTo}}" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+        </div>
+        <div class="xl:col-span-6 flex gap-2">
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded font-medium transition">Filter</button>
+            <a href="/requests" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-medium transition">Reset</a>
+        </div>
     </form>
 </div>
 
-<!-- Requests Table -->
 <div class="overflow-x-auto">
     <table class="w-full text-sm">
         <thead class="bg-gray-800 text-gray-400">
@@ -39,6 +60,7 @@
                 <th class="px-4 py-3 text-left">Type</th>
                 <th class="px-4 py-3 text-left">Method</th>
                 <th class="px-4 py-3 text-left">Endpoint</th>
+                <th class="px-4 py-3 text-left">Path</th>
                 <th class="px-4 py-3 text-left">IP</th>
                 <th class="px-4 py-3 text-left">Size</th>
                 <th class="px-4 py-3 text-left">Time</th>
@@ -55,30 +77,34 @@
                 </td>
                 <td class="px-4 py-3 font-mono">{{.Method}}</td>
                 <td class="px-4 py-3 text-emerald-400">{{.EndpointSlug}}</td>
+                <td class="px-4 py-3 text-gray-300 truncate max-w-xs">{{.Path}}</td>
                 <td class="px-4 py-3 text-gray-400">{{.RemoteAddr}}</td>
                 <td class="px-4 py-3 text-gray-400">{{.SizeBytes}}B</td>
                 <td class="px-4 py-3 text-gray-400">{{.CreatedAt.Format "01-02 15:04:05"}}</td>
-                <td class="px-4 py-3"><a href="/requests/{{.ID}}" class="text-emerald-400 hover:underline">Detail →</a></td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    <a href="/requests/{{.ID}}" class="text-emerald-400 hover:underline">Detail</a>
+                    <span class="text-gray-600 mx-1">|</span>
+                    <a href="/requests/diff?left={{.ID}}&endpoint={{.EndpointSlug}}" class="text-blue-400 hover:underline">Diff</a>
+                </td>
             </tr>
             {{end}}
             {{else}}
             <tr id="requests-empty-row">
-                <td colspan="8" class="px-4 py-8 text-center text-gray-400">No requests captured yet.</td>
+                <td colspan="9" class="px-4 py-8 text-center text-gray-400">No requests captured yet.</td>
             </tr>
             {{end}}
         </tbody>
     </table>
 </div>
 
-<!-- Pagination -->
 {{if gt .totalPages 1}}
 <div class="flex justify-center gap-2 mt-6">
     {{if gt .page 1}}
-    <a href="/requests?page={{subtract .page 1}}&type={{.currentType}}&endpoint={{.currentSlug}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">← Prev</a>
+    <a href="/requests?page={{subtract .page 1}}{{if .filterQuery}}&{{.filterQuery}}{{end}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">← Prev</a>
     {{end}}
     <span class="px-3 py-1 text-gray-400">Page {{.page}} of {{.totalPages}}</span>
     {{if lt .page .totalPages}}
-    <a href="/requests?page={{add .page 1}}&type={{.currentType}}&endpoint={{.currentSlug}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">Next →</a>
+    <a href="/requests?page={{add .page 1}}{{if .filterQuery}}&{{.filterQuery}}{{end}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">Next →</a>
     {{end}}
 </div>
 {{end}}
@@ -87,7 +113,15 @@
 (() => {
     const currentType = '{{.currentType}}';
     const currentSlug = '{{.currentSlug}}';
+    const currentMethod = '{{.currentMethod}}';
+    const currentQuery = '{{.currentQuery}}'.toLowerCase();
+    const currentFrom = '{{.currentFrom}}';
+    const currentTo = '{{.currentTo}}';
     const currentPage = Number('{{.page}}');
+
+    const fromDate = currentFrom ? new Date(currentFrom) : null;
+    const toDate = currentTo ? new Date(currentTo) : null;
+
     const totalEl = document.getElementById('requests-total');
     const bodyEl = document.getElementById('requests-body');
 
@@ -95,6 +129,17 @@
         if (currentPage !== 1) return false;
         if (currentType && req.type !== currentType) return false;
         if (currentSlug && req.endpoint_slug !== currentSlug) return false;
+        if (currentMethod && req.method !== currentMethod) return false;
+
+        const created = req.created_at ? new Date(req.created_at) : null;
+        if (fromDate && created && created < fromDate) return false;
+        if (toDate && created && created > toDate) return false;
+
+        if (currentQuery) {
+            const haystack = `${req.endpoint_slug || ''} ${req.path || ''} ${req.method || ''} ${req.remote_addr || ''}`.toLowerCase();
+            if (!haystack.includes(currentQuery)) return false;
+        }
+
         return true;
     }
 
@@ -132,10 +177,15 @@
             </td>
             <td class="px-4 py-3 font-mono">${req.method}</td>
             <td class="px-4 py-3 text-emerald-400">${req.endpoint_slug}</td>
+            <td class="px-4 py-3 text-gray-300 truncate max-w-xs">${req.path || ''}</td>
             <td class="px-4 py-3 text-gray-400">${req.remote_addr || ''}</td>
             <td class="px-4 py-3 text-gray-400">${(req.size_bytes ?? 0)}B</td>
             <td class="px-4 py-3 text-gray-400">${createdText}</td>
-            <td class="px-4 py-3"><a href="/requests/${req.id}" class="text-emerald-400 hover:underline">Detail →</a></td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <a href="/requests/${req.id}" class="text-emerald-400 hover:underline">Detail</a>
+                <span class="text-gray-600 mx-1">|</span>
+                <a href="/requests/diff?left=${req.id}&endpoint=${encodeURIComponent(req.endpoint_slug || '')}" class="text-blue-400 hover:underline">Diff</a>
+            </td>
         `;
         bodyEl.prepend(tr);
         if (bodyEl.children.length > 50) bodyEl.removeChild(bodyEl.lastElementChild);

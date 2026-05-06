@@ -11,3 +11,22 @@ database:
 
 settings:
   max_requests: 10000
+  max_request_body_bytes: 1048576
+  max_response_body_bytes: 2097152
+  cleanup_interval_seconds: 30
+  session_ttl_hours: 12
+  allowed_ws_origins: []
+  redaction_enabled: true
+  redaction_headers:
+    - authorization
+    - cookie
+    - x-api-key
+    - x-auth-token
+  redaction_fields:
+    - password
+    - token
+    - secret
+    - api_key
+  alert_webhook_url: ""
+  alert_min_sent_status: 500
+  alert_on_sent_error: true

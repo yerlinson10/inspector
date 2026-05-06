@@ -17,6 +17,7 @@
         <div class="flex gap-2">
             <button onclick="copyAsCurl()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i><span>Copy as cURL</span></button>
             <a href="/send?replay={{.ID}}" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="rotate-cw" class="w-4 h-4"></i><span>Replay</span></a>
+            <a href="/requests/diff?left={{.ID}}{{if $.suggestedCompareID}}&right={{$.suggestedCompareID}}{{end}}&endpoint={{.EndpointSlug}}" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="git-compare-arrows" class="w-4 h-4"></i><span>Compare</span></a>
         </div>
     </div>
 
@@ -59,11 +60,12 @@
 <script>
 function copyAsCurl() {
     const method = '{{.Method}}';
+    const targetPath = '{{$.requestTarget}}';
     const body = document.getElementById('body')?.innerText || '';
     let headers = {};
     try { headers = JSON.parse(document.getElementById('headers').innerText); } catch(e) {}
 
-    let curl = `curl -X ${method} '${window.location.origin}${path}'`;
+    let curl = `curl -X ${method} '${window.location.origin}${targetPath}'`;
     for (const [key, values] of Object.entries(headers)) {
         if (Array.isArray(values)) {
             values.forEach(v => { curl += ` \\\n  -H '${key}: ${v}'`; });
@@ -72,8 +74,9 @@ function copyAsCurl() {
     if (body) {
         curl += ` \\\n  -d '${body.replace(/'/g, "'\\''")}'`;
     }
-    navigator.clipboard.writeText(curl);
-    window.appAlert('Copied to clipboard!', 'Copied');
+    navigator.clipboard.writeText(curl)
+        .then(() => window.appAlert('Copied to clipboard!', 'Copied'))
+        .catch(() => window.appAlert('No se pudo copiar el comando.', 'Error'));
 }
 </script>
 {{end}}

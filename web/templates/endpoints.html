@@ -3,76 +3,61 @@
     <h2 class="text-2xl font-bold">Endpoints</h2>
 </div>
 
-<!-- Create Form -->
+{{if .error}}
+<div class="bg-red-900/40 border border-red-500 text-red-200 px-4 py-3 rounded mb-6">{{.error}}</div>
+{{end}}
+
 <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
     <h3 class="text-lg font-semibold mb-4">Create New Endpoint</h3>
     <p class="text-sm text-gray-400 mb-4">Define un endpoint publico para recibir webhooks y personaliza la respuesta.</p>
+
     <form method="POST" action="/endpoints" class="space-y-4" id="create-endpoint-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{.csrfToken}}">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm text-gray-400 mb-1" for="endpoint-name">Name <span class="text-red-400">*</span></label>
-                <input type="text" id="endpoint-name" name="name" required minlength="3" maxlength="100" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="My Project Webhook" aria-describedby="name-help">
-                <p id="name-help" class="text-xs text-gray-500 mt-1">Minimo 3 caracteres.</p>
-                <p id="name-error" class="text-xs text-red-400 mt-1 hidden"></p>
+                <input type="text" id="endpoint-name" name="name" required minlength="3" maxlength="100" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="My Project Webhook">
+                <p class="text-xs text-gray-500 mt-1">Minimo 3 caracteres.</p>
             </div>
             <div>
                 <label class="block text-sm text-gray-400 mb-1" for="endpoint-slug">Slug (URL path) <span class="text-red-400">*</span></label>
-                <input type="text" id="endpoint-slug" name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="80" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="my-project" aria-describedby="slug-help slug-preview slug-error" autocapitalize="off" spellcheck="false" inputmode="url">
-                <p id="slug-help" class="text-xs text-gray-500 mt-1">Solo minusculas, numeros y guiones. Ej: my-project-1</p>
+                <input type="text" id="endpoint-slug" name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="80" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="my-project" autocapitalize="off" spellcheck="false">
+                <p class="text-xs text-gray-500 mt-1">Solo minusculas, numeros y guiones.</p>
                 <p id="slug-preview" class="text-xs text-emerald-400/90 mt-1">URL: /in/my-project</p>
-                <p id="slug-error" class="text-xs text-red-400 mt-1 hidden"></p>
             </div>
         </div>
+
         <div>
             <label class="block text-sm text-gray-400 mb-1" for="endpoint-description">Description</label>
             <textarea id="endpoint-description" name="description" rows="3" maxlength="500" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none resize-y" placeholder="Receives webhooks from..."></textarea>
         </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm text-gray-400 mb-1" for="response-status">Response Status</label>
-                <input type="number" id="response-status" name="response_status" value="200" min="100" max="599" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none" aria-describedby="status-help status-error">
-                <p id="status-help" class="text-xs text-gray-500 mt-1">Rango valido: 100-599.</p>
-                <p id="status-error" class="text-xs text-red-400 mt-1 hidden"></p>
+                <input type="number" id="response-status" name="response_status" value="200" min="100" max="599" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
             </div>
             <div class="bg-gray-900/60 border border-gray-700 rounded p-3">
-                <p class="text-xs text-gray-400">JSON Tools</p>
-                <p class="text-xs text-gray-500 mt-1">Usa acciones rapidas para formatear, validar y cargar plantillas en Headers y Body.</p>
+                <p class="text-xs text-gray-400">Tip</p>
+                <p class="text-xs text-gray-500 mt-1">Los campos de headers y body deben ser JSON valido.</p>
             </div>
         </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm text-gray-400 mb-1" for="response-headers">Response Headers (JSON)</label>
-                <textarea id="response-headers" name="response_headers" rows="7" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none resize-y font-mono text-sm" placeholder='{"Content-Type":"application/json"}' aria-describedby="headers-help headers-error" spellcheck="false">{
+                <textarea id="response-headers" name="response_headers" rows="6" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none resize-y font-mono text-sm" placeholder='{"Content-Type":"application/json"}' spellcheck="false">{
   "Content-Type": "application/json"
 }</textarea>
-                <div class="flex flex-wrap gap-2 mt-2">
-                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded" data-json-target="response-headers" data-json-action="pretty">Format</button>
-                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded" data-json-target="response-headers" data-json-action="minify">Minify</button>
-                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded" data-json-target="response-headers" data-json-action="validate">Validate</button>
-                    <button type="button" class="text-xs bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 px-2 py-1 rounded" data-json-target="response-headers" data-json-action="fix">Fix JSON</button>
-                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded" data-json-target="response-headers" data-json-action="sample-basic-headers">Basic Headers</button>
-                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded" data-json-target="response-headers" data-json-action="sample-cors-headers">CORS Headers</button>
-                </div>
-                <p id="headers-help" class="text-xs text-gray-500 mt-1">Requerido. Debe ser un objeto JSON valido.</p>
-                <p id="headers-error" class="text-xs text-red-400 mt-1 hidden"></p>
             </div>
             <div>
-                <label class="block text-sm text-gray-400 mb-1" for="response-body">Response Body</label>
-                <textarea id="response-body" name="response_body" rows="7" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none resize-y font-mono text-sm" placeholder='{"status":"ok"}' aria-describedby="body-help body-error" spellcheck="false">{
+                <label class="block text-sm text-gray-400 mb-1" for="response-body">Response Body (JSON)</label>
+                <textarea id="response-body" name="response_body" rows="6" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none resize-y font-mono text-sm" placeholder='{"status":"ok"}' spellcheck="false">{
   "status": "ok"
 }</textarea>
-                <div class="flex flex-wrap gap-2 mt-2">
-                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded" data-json-target="response-body" data-json-action="pretty">Format</button>
-                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded" data-json-target="response-body" data-json-action="minify">Minify</button>
-                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded" data-json-target="response-body" data-json-action="validate">Validate</button>
-                    <button type="button" class="text-xs bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 px-2 py-1 rounded" data-json-target="response-body" data-json-action="fix">Fix JSON</button>
-                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded" data-json-target="response-body" data-json-action="sample-success-body">Success Body</button>
-                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded" data-json-target="response-body" data-json-action="sample-error-body">Error Body</button>
-                </div>
-                <p id="body-help" class="text-xs text-gray-500 mt-1">Requerido. Debe ser JSON valido.</p>
-                <p id="body-error" class="text-xs text-red-400 mt-1 hidden"></p>
             </div>
         </div>
+
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
             <button id="create-endpoint-submit" type="submit" class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-2 rounded font-medium transition inline-flex items-center justify-center gap-2 min-w-40">
                 <i data-lucide="plus" class="w-4 h-4"></i>
@@ -81,6 +66,73 @@
             <p class="text-xs text-gray-500">Los campos marcados con <span class="text-red-400">*</span> son obligatorios.</p>
         </div>
     </form>
+</div>
+
+{{if .endpoints}}
+<div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+    <h3 class="text-lg font-semibold mb-4">Existing Endpoints</h3>
+    <div class="space-y-4">
+        {{range .endpoints}}
+        <article id="endpoint-{{.ID}}" class="rounded-lg border border-gray-700 bg-gray-900/50 p-4">
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div class="space-y-2">
+                    <h4 class="text-base font-semibold text-emerald-300">{{.Name}}</h4>
+                    <p class="text-sm text-gray-400">{{if .Description}}{{.Description}}{{else}}Sin descripcion{{end}}</p>
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                        <code class="bg-gray-900 px-2 py-1 rounded text-emerald-400">/in/{{.Slug}}</code>
+                        <button type="button" onclick="copyToClipboard(window.location.origin + '/in/{{.Slug}}')" class="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">Copy URL</button>
+                        <code class="bg-gray-900 px-2 py-1 rounded text-blue-400">{{$.publicWSBaseURL}}/in/{{.Slug}}/ws</code>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" onclick="clearLogs({{.ID}})" class="px-3 py-1.5 rounded border border-amber-500/50 text-amber-300 hover:bg-amber-500/15 text-xs">Clear Logs</button>
+                    <button type="button" onclick="deleteEndpoint({{.ID}})" class="px-3 py-1.5 rounded border border-red-500/50 text-red-300 hover:bg-red-500/15 text-xs">Delete</button>
+                </div>
+            </div>
+
+            <details class="mt-4 group">
+                <summary class="cursor-pointer text-sm text-gray-300 hover:text-gray-100">Edit response config</summary>
+                <form method="POST" action="/endpoints/{{.ID}}" class="mt-4 space-y-3">
+                    <input type="hidden" name="csrf_token" value="{{$.csrfToken}}">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Name</label>
+                            <input type="text" name="name" value="{{.Name}}" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Response Status</label>
+                            <input type="number" name="response_status" value="{{.ResponseStatus}}" min="100" max="599" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Description</label>
+                        <textarea name="description" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">{{.Description}}</textarea>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Response Headers (JSON)</label>
+                            <textarea name="response_headers" rows="5" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.ResponseHeaders}}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Response Body</label>
+                            <textarea name="response_body" rows="5" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.ResponseBody}}</textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium transition">Save Changes</button>
+                    </div>
+                </form>
+            </details>
+        </article>
+        {{end}}
+    </div>
+</div>
+{{else}}
+<div class="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center text-gray-400">
+    No endpoints creados todavia.
+</div>
+{{end}}
+
 <script>
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text)
@@ -88,96 +140,47 @@ function copyToClipboard(text) {
         .catch(() => window.appAlert('No se pudo copiar la URL', 'Error'));
 }
 
+function apiFetch(url, options) {
+    const sender = window.csrfFetch || fetch;
+    return sender(url, options);
+}
+
 async function deleteEndpoint(id) {
     const proceed = await window.appConfirm('Delete this endpoint and all its logs?', 'Delete Endpoint');
     if (!proceed) return;
-    fetch('/endpoints/' + id, { method: 'DELETE' })
-        .then(r => r.json())
-        .then(() => {
-            document.getElementById('endpoint-' + id).remove();
-        });
+
+    const res = await apiFetch('/endpoints/' + id, { method: 'DELETE' });
+    if (!res.ok) {
+        await window.appAlert('No se pudo eliminar el endpoint.', 'Error');
+        return;
+    }
+
+    const row = document.getElementById('endpoint-' + id);
+    if (row) row.remove();
 }
 
 async function clearLogs(id) {
     const proceed = await window.appConfirm('Clear all logs for this endpoint?', 'Clear Logs');
     if (!proceed) return;
-    fetch('/endpoints/' + id + '/clear', { method: 'POST' })
-        .then(r => r.json())
-        .then(() => window.appAlert('Logs cleared', 'Done'));
+
+    const res = await apiFetch('/endpoints/' + id + '/clear', { method: 'POST' });
+    if (!res.ok) {
+        await window.appAlert('No se pudieron limpiar los logs.', 'Error');
+        return;
+    }
+
+    await window.appAlert('Logs cleared', 'Done');
 }
 
 (() => {
     const form = document.getElementById('create-endpoint-form');
-    const nameInput = document.getElementById('endpoint-name');
     const slugInput = document.getElementById('endpoint-slug');
+    const slugPreview = document.getElementById('slug-preview');
     const statusInput = document.getElementById('response-status');
     const headersInput = document.getElementById('response-headers');
     const bodyInput = document.getElementById('response-body');
-    const descriptionInput = document.getElementById('endpoint-description');
     const submitBtn = document.getElementById('create-endpoint-submit');
     const submitText = document.getElementById('create-endpoint-submit-text');
-    const slugPreview = document.getElementById('slug-preview');
-
-    const fieldErrors = {
-        name: document.getElementById('name-error'),
-        slug: document.getElementById('slug-error'),
-        status: document.getElementById('status-error'),
-        headers: document.getElementById('headers-error'),
-        body: document.getElementById('body-error')
-    };
-
-    function setFieldError(key, input, message) {
-        const errorEl = fieldErrors[key];
-        if (!errorEl) return;
-        if (message) {
-            errorEl.textContent = message;
-            errorEl.classList.remove('hidden');
-            input.classList.add('border-red-500');
-            input.classList.remove('border-gray-600');
-            input.setAttribute('aria-invalid', 'true');
-        } else {
-            errorEl.textContent = '';
-            errorEl.classList.add('hidden');
-            input.classList.remove('border-red-500');
-            input.classList.add('border-gray-600');
-            input.removeAttribute('aria-invalid');
-        }
-    }
-
-    function parseJSONValue(value) {
-        try {
-            return { ok: true, value: JSON.parse(value), error: '' };
-        } catch (err) {
-            const message = err && err.message ? err.message : 'JSON invalido';
-            return { ok: false, value: null, error: message };
-        }
-    }
-
-    function parseJSONInput(input) {
-        const value = input.value.trim();
-        if (!value) return { ok: false, value: null, error: 'JSON vacio' };
-        return parseJSONValue(value);
-    }
-
-    function autoResizeTextarea(el) {
-        if (!el) return;
-        el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, 480) + 'px';
-    }
-
-    function validateName() {
-        const value = nameInput.value.trim();
-        if (!value) {
-            setFieldError('name', nameInput, 'El nombre es obligatorio.');
-            return false;
-        }
-        if (value.length < 3) {
-            setFieldError('name', nameInput, 'Debe tener al menos 3 caracteres.');
-            return false;
-        }
-        setFieldError('name', nameInput, '');
-        return true;
-    }
 
     function normalizeSlug(value) {
         return value
@@ -189,311 +192,54 @@ async function clearLogs(id) {
             .replace(/^-|-$/g, '');
     }
 
-    function validateSlug() {
-        const value = slugInput.value.trim();
-        if (!value) {
-            setFieldError('slug', slugInput, 'El slug es obligatorio.');
-            return false;
-        }
-        const pattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-        if (!pattern.test(value)) {
-            setFieldError('slug', slugInput, 'Usa solo minusculas, numeros y guiones intermedios.');
-            return false;
-        }
-        setFieldError('slug', slugInput, '');
-        return true;
-    }
-
-    function validateStatus() {
-        const value = Number(statusInput.value);
-        if (!Number.isInteger(value) || value < 100 || value > 599) {
-            setFieldError('status', statusInput, 'Debe ser un numero entre 100 y 599.');
-            return false;
-        }
-        setFieldError('status', statusInput, '');
-        return true;
-    }
-
-    function validateHeaders() {
-        const parsed = parseJSONInput(headersInput);
-        if (!headersInput.value.trim()) {
-            setFieldError('headers', headersInput, 'Headers es obligatorio y debe ser JSON.');
-            return false;
-        }
-        if (!parsed.ok) {
-            setFieldError('headers', headersInput, 'Headers JSON invalido: ' + parsed.error);
-            return false;
-        }
-        if (typeof parsed.value !== 'object' || Array.isArray(parsed.value)) {
-            setFieldError('headers', headersInput, 'Headers debe ser un objeto JSON.');
-            return false;
-        }
-        setFieldError('headers', headersInput, '');
-        return true;
-    }
-
-    function validateBody() {
-        if (!bodyInput.value.trim()) {
-            setFieldError('body', bodyInput, 'Body es obligatorio y debe ser JSON.');
-            return false;
-        }
-        const parsed = parseJSONInput(bodyInput);
-        if (!parsed.ok) {
-            setFieldError('body', bodyInput, 'Body JSON invalido: ' + parsed.error);
-            return false;
-        }
-        if (parsed.value === null) {
-            setFieldError('body', bodyInput, 'Body no puede ser null.');
-            return false;
-        }
-        setFieldError('body', bodyInput, '');
-        return true;
-    }
-
-    const jsonSamples = {
-        'sample-basic-headers': {
-            'Content-Type': 'application/json'
-        },
-        'sample-cors-headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-        },
-        'sample-success-body': {
-            status: 'ok',
-            message: 'Processed successfully'
-        },
-        'sample-error-body': {
-            status: 'error',
-            error: 'Invalid payload'
-        }
-    };
-
-    function runJSONAction(targetId, action) {
-        const target = document.getElementById(targetId);
-        if (!target) return;
-
-        if (action in jsonSamples) {
-            target.value = JSON.stringify(jsonSamples[action], null, 2);
-            autoResizeTextarea(target);
-            if (targetId === 'response-headers') validateHeaders();
-            if (targetId === 'response-body') validateBody();
-            return;
-        }
-
-        if (action === 'fix') {
-            const fixed = attemptFixJSON(target.value);
-            if (fixed === null) {
-                window.appAlert('No se pudo reparar el JSON automaticamente. Revisalo manualmente.', 'Fix JSON');
-                if (targetId === 'response-headers') validateHeaders();
-                if (targetId === 'response-body') validateBody();
-            } else {
-                target.value = JSON.stringify(fixed, null, 2);
-                autoResizeTextarea(target);
-                if (targetId === 'response-headers') validateHeaders();
-                if (targetId === 'response-body') validateBody();
-                window.appAlert('JSON reparado y formateado correctamente.', 'Fix JSON');
-            }
-            return;
-        }
-
-        if (!target.value.trim()) {
-            window.appAlert('El editor JSON esta vacio.', 'JSON');
-            return;
-        }
-
-        const parsed = parseJSONInput(target);
-        if (!parsed.ok) {
-            if (targetId === 'response-headers') validateHeaders();
-            if (targetId === 'response-body') validateBody();
-            window.appAlert('JSON invalido: ' + parsed.error, 'JSON invalido');
-            return;
-        }
-
-        if (action === 'pretty') {
-            target.value = JSON.stringify(parsed.value, null, 2);
-            autoResizeTextarea(target);
-        }
-
-        if (action === 'minify') {
-            target.value = JSON.stringify(parsed.value);
-            autoResizeTextarea(target);
-        }
-
-        if (action === 'validate') {
-            window.appAlert('JSON valido.', 'Validacion');
-        }
-
-        if (targetId === 'response-headers') validateHeaders();
-        if (targetId === 'response-body') validateBody();
-    }
-
-    function attemptFixJSON(raw) {
-        if (!raw || !raw.trim()) return null;
-
-        const direct = parseJSONValue(raw);
-        if (direct.ok) return direct.value;
-
-        let s = raw.trim();
-
-        // Eliminar BOM y caracteres invisibles
-        s = s.replace(/^\uFEFF/, '').replace(/[\u200B-\u200D\uFEFF]/g, '');
-
-        // Comillas tipograficas → rectas
-        s = s.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
-
-        // Comillas simples como delimitador → dobles
-        s = s.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (_, inner) => '"' + inner.replace(/"/g, '\\"') + '"');
-
-        // Claves sin comillas → con comillas
-        s = s.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, '$1"$2"$3');
-
-        // Trailing commas antes de } o ]
-        s = s.replace(/,(\s*[}\]])/g, '$1');
-
-        // undefined → null
-        s = s.replace(/:\s*undefined\b/g, ': null');
-
-        // Comentarios JS de una linea
-        s = s.replace(/\/\/[^\n]*/g, '');
-
-        // Comentarios JS de bloque
-        s = s.replace(/\/\*[\s\S]*?\*\//g, '');
-
-        // Cerrar y eliminar llaves/corchetes de mas o faltantes
-        s = closeOpenBrackets(s);
-
-        const attempt = parseJSONValue(s);
-        return attempt.ok ? attempt.value : null;
-    }
-
-    function closeOpenBrackets(s) {
-        const stack = [];
-        let inString = false;
-        let escape = false;
-
-        // Primera pasada: detectar y eliminar cierres de mas
-        // Reconstruimos el string saltando los cierres huerfanos
-        let result = '';
-        for (let i = 0; i < s.length; i++) {
-            const ch = s[i];
-            if (escape) { escape = false; result += ch; continue; }
-            if (ch === '\\' && inString) { escape = true; result += ch; continue; }
-            if (ch === '"') { inString = !inString; result += ch; continue; }
-            if (inString) { result += ch; continue; }
-
-            if (ch === '{') { stack.push('}'); result += ch; }
-            else if (ch === '[') { stack.push(']'); result += ch; }
-            else if (ch === '}' || ch === ']') {
-                if (stack.length && stack[stack.length - 1] === ch) {
-                    // cierre esperado: OK
-                    stack.pop();
-                    result += ch;
-                }
-                // si no hay nada en el stack o no coincide: cierre huerfano, se omite
-            } else {
-                result += ch;
-            }
-        }
-
-        s = result;
-
-        // Si estaba en medio de un string sin cerrar, cerrarlo
-        if (inString) s += '"';
-
-        // Eliminar trailing comma antes de cerrar
-        s = s.replace(/,\s*$/, '');
-
-        // Cerrar en orden inverso los que quedaron abiertos
-        while (stack.length) s += stack.pop();
-
-        return s;
-    }
-
     function updateSlugPreview() {
+        if (!slugInput || !slugPreview) return;
         const value = slugInput.value.trim() || 'my-project';
         slugPreview.textContent = 'URL: /in/' + value;
     }
 
-    function validateForm() {
-        const checks = [validateName(), validateSlug(), validateStatus(), validateHeaders(), validateBody()];
-        return checks.every(Boolean);
+    function validateJSON(value) {
+        if (!value.trim()) return false;
+        try {
+            JSON.parse(value);
+            return true;
+        } catch (_) {
+            return false;
+        }
     }
 
     if (slugInput) {
         slugInput.addEventListener('input', () => {
-            const current = slugInput.value;
-            const normalized = normalizeSlug(current);
-            if (normalized !== current) {
+            const normalized = normalizeSlug(slugInput.value);
+            if (normalized !== slugInput.value) {
                 slugInput.value = normalized;
             }
             updateSlugPreview();
-            validateSlug();
         });
-        slugInput.addEventListener('blur', validateSlug);
         updateSlugPreview();
     }
 
-    if (nameInput) {
-        nameInput.addEventListener('blur', validateName);
-        nameInput.addEventListener('input', () => {
-            if (fieldErrors.name && !fieldErrors.name.classList.contains('hidden')) validateName();
-        });
-    }
-
-    if (statusInput) {
-        statusInput.addEventListener('blur', validateStatus);
-        statusInput.addEventListener('input', () => {
-            if (fieldErrors.status && !fieldErrors.status.classList.contains('hidden')) validateStatus();
-        });
-    }
-
-    if (headersInput) {
-        headersInput.addEventListener('blur', validateHeaders);
-        headersInput.addEventListener('input', () => {
-            autoResizeTextarea(headersInput);
-            if (fieldErrors.headers && !fieldErrors.headers.classList.contains('hidden')) validateHeaders();
-        });
-        autoResizeTextarea(headersInput);
-    }
-
-    if (bodyInput) {
-        bodyInput.addEventListener('blur', validateBody);
-        bodyInput.addEventListener('input', () => {
-            autoResizeTextarea(bodyInput);
-            if (fieldErrors.body && !fieldErrors.body.classList.contains('hidden')) validateBody();
-        });
-        autoResizeTextarea(bodyInput);
-    }
-
-    if (descriptionInput) {
-        descriptionInput.addEventListener('input', () => autoResizeTextarea(descriptionInput));
-        autoResizeTextarea(descriptionInput);
-    }
-
-    document.querySelectorAll('[data-json-target][data-json-action]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            runJSONAction(btn.dataset.jsonTarget, btn.dataset.jsonAction);
-        });
-    });
-
-    if (headersInput && !headersInput.value.trim()) {
-        headersInput.value = JSON.stringify(jsonSamples['sample-basic-headers'], null, 2);
-        autoResizeTextarea(headersInput);
-    }
-
-    if (bodyInput && !bodyInput.value.trim()) {
-        bodyInput.value = JSON.stringify(jsonSamples['sample-success-body'], null, 2);
-        autoResizeTextarea(bodyInput);
-    }
-
     if (form) {
-        form.addEventListener('submit', function(event) {
-            if (!validateForm()) {
+        form.addEventListener('submit', async function(event) {
+            const status = Number(statusInput.value);
+            if (!Number.isInteger(status) || status < 100 || status > 599) {
                 event.preventDefault();
-                const firstError = form.querySelector('[aria-invalid="true"]');
-                if (firstError) firstError.focus();
-                window.appAlert('Revisa los campos marcados antes de continuar.', 'Validacion');
+                await window.appAlert('Response status debe estar entre 100 y 599.', 'Validacion');
+                statusInput.focus();
+                return;
+            }
+
+            if (!validateJSON(headersInput.value)) {
+                event.preventDefault();
+                await window.appAlert('Response headers debe ser JSON valido.', 'Validacion');
+                headersInput.focus();
+                return;
+            }
+
+            if (!validateJSON(bodyInput.value)) {
+                event.preventDefault();
+                await window.appAlert('Response body debe ser JSON valido.', 'Validacion');
+                bodyInput.focus();
                 return;
             }
 

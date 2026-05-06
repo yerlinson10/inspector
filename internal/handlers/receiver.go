@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
+	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"inspector/internal/broadcaster"
@@ -15,7 +18,7 @@ import (
 )
 
 var wsUpgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: isAllowedWebSocketOrigin,
 }
 
 func ReceiveRequest(c *gin.Context) {
@@ -27,7 +30,21 @@ func ReceiveRequest(c *gin.Context) {
 		return
 	}
 
-	body, _ := io.ReadAll(c.Request.Body)
+	maxBodyBytes := maxRequestBodyBytes()
+	if maxBodyBytes > 0 {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBodyBytes)
+	}
+
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "request body too large"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+		return
+	}
 	headers, _ := json.Marshal(c.Request.Header)
 	queryParams, _ := json.Marshal(c.Request.URL.Query())
 
@@ -36,7 +53,7 @@ func ReceiveRequest(c *gin.Context) {
 		reqType = "webhook"
 	}
 
-	log := models.RequestLog{
+	requestLog := models.RequestLog{
 		EndpointID:   endpoint.ID,
 		EndpointSlug: slug,
 		Type:         reqType,
@@ -49,35 +66,43 @@ func ReceiveRequest(c *gin.Context) {
 		SizeBytes:    int64(len(body)),
 		CreatedAt:    time.Now(),
 	}
+	requestLog = redactRequestLog(requestLog)
 
-	storage.DB.Create(&log)
-	go storage.Cleanup(10000)
+	if err := storage.DB.Create(&requestLog).Error; err != nil {
+		log.Printf("failed to persist request log for slug %s: %v", slug, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to persist request"})
+		return
+	}
 
 	broadcaster.DefaultHub.Broadcast(broadcaster.Event{
 		Type: "new_request",
 		Data: map[string]interface{}{
-			"id":            log.ID,
-			"endpoint_slug": log.EndpointSlug,
-			"type":          log.Type,
-			"method":        log.Method,
-			"path":          log.Path,
-			"remote_addr":   log.RemoteAddr,
-			"size_bytes":    log.SizeBytes,
-			"created_at":    log.CreatedAt.Format(time.RFC3339),
+			"id":            requestLog.ID,
+			"endpoint_slug": requestLog.EndpointSlug,
+			"type":          requestLog.Type,
+			"method":        requestLog.Method,
+			"path":          requestLog.Path,
+			"remote_addr":   requestLog.RemoteAddr,
+			"size_bytes":    requestLog.SizeBytes,
+			"created_at":    requestLog.CreatedAt.Format(time.RFC3339),
 		},
 	})
 
 	// Send configured response
 	status := endpoint.ResponseStatus
-	if status == 0 {
+	if status < 100 || status > 599 {
 		status = 200
 	}
 
+	contentType := "application/json"
 	if endpoint.ResponseHeaders != "" {
 		var respHeaders map[string]string
 		if err := json.Unmarshal([]byte(endpoint.ResponseHeaders), &respHeaders); err == nil {
 			for k, v := range respHeaders {
 				c.Header(k, v)
+				if strings.EqualFold(k, "Content-Type") && strings.TrimSpace(v) != "" {
+					contentType = strings.TrimSpace(v)
+				}
 			}
 		}
 	}
@@ -87,7 +112,7 @@ func ReceiveRequest(c *gin.Context) {
 		respBody = `{"status":"received"}`
 	}
 
-	c.Data(status, "application/json", []byte(respBody))
+	c.Data(status, contentType, []byte(respBody))
 }
 
 func ReceiveWebSocket(c *gin.Context) {
@@ -105,6 +130,10 @@ func ReceiveWebSocket(c *gin.Context) {
 	}
 	defer conn.Close()
 
+	if maxBodyBytes := maxRequestBodyBytes(); maxBodyBytes > 0 {
+		conn.SetReadLimit(maxBodyBytes)
+	}
+
 	headers, _ := json.Marshal(c.Request.Header)
 
 	for {
@@ -113,7 +142,7 @@ func ReceiveWebSocket(c *gin.Context) {
 			break
 		}
 
-		log := models.RequestLog{
+		wsLog := models.RequestLog{
 			EndpointID:   endpoint.ID,
 			EndpointSlug: slug,
 			Type:         "websocket",
@@ -125,26 +154,32 @@ func ReceiveWebSocket(c *gin.Context) {
 			SizeBytes:    int64(len(message)),
 			CreatedAt:    time.Now(),
 		}
+		wsLog = redactRequestLog(wsLog)
 
-		storage.DB.Create(&log)
+		if err := storage.DB.Create(&wsLog).Error; err != nil {
+			log.Printf("failed to persist websocket log for slug %s: %v", slug, err)
+			break
+		}
 
 		broadcaster.DefaultHub.Broadcast(broadcaster.Event{
 			Type: "new_request",
 			Data: map[string]interface{}{
-				"id":            log.ID,
-				"endpoint_slug": log.EndpointSlug,
-				"type":          log.Type,
-				"method":        log.Method,
-				"path":          log.Path,
-				"remote_addr":   log.RemoteAddr,
-				"size_bytes":    log.SizeBytes,
-				"created_at":    log.CreatedAt.Format(time.RFC3339),
+				"id":            wsLog.ID,
+				"endpoint_slug": wsLog.EndpointSlug,
+				"type":          wsLog.Type,
+				"method":        wsLog.Method,
+				"path":          wsLog.Path,
+				"remote_addr":   wsLog.RemoteAddr,
+				"size_bytes":    wsLog.SizeBytes,
+				"created_at":    wsLog.CreatedAt.Format(time.RFC3339),
 			},
 		})
 
 		// Echo back acknowledgment
 		ack := []byte(`{"status":"received"}`)
-		conn.WriteMessage(msgType, ack)
+		if err := conn.WriteMessage(msgType, ack); err != nil {
+			break
+		}
 	}
 }
 
