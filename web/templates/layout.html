@@ -283,6 +283,199 @@
         })();
 
         (function () {
+            if (window.liveUpdates) return;
+
+            let sseSource = null;
+            let wsSocket = null;
+            let reconnectTimer = null;
+            let transport = null; // 'ws' | 'sse' | null
+            let wsFailed = false;
+            const listeners = new Map();
+            let maxRequestIdSeen = 0;
+            let maxSentRequestIdSeen = 0;
+
+            function ensureArrayBucket(eventType) {
+                if (!listeners.has(eventType)) {
+                    listeners.set(eventType, []);
+                }
+                return listeners.get(eventType);
+            }
+
+            function dispatch(message) {
+                if (!message || !message.type) return;
+                const bucket = listeners.get(message.type);
+                if (!bucket || bucket.length === 0) return;
+                bucket.slice().forEach(function (handler) {
+                    try {
+                        handler(message.data || {});
+                    } catch (_) {
+                        // Ignore listener errors to avoid breaking the stream for everyone else.
+                    }
+                });
+            }
+
+            function shouldSkipById(msgType, payload) {
+                if (!payload || typeof payload.id !== 'number') return false;
+                if (msgType === 'new_request') {
+                    if (payload.id <= maxRequestIdSeen) return true;
+                    maxRequestIdSeen = payload.id;
+                    return false;
+                }
+                if (msgType === 'new_sent_request') {
+                    if (payload.id <= maxSentRequestIdSeen) return true;
+                    maxSentRequestIdSeen = payload.id;
+                    return false;
+                }
+                return false;
+            }
+
+            function handleRawMessage(raw) {
+                let msg;
+                try {
+                    msg = JSON.parse(raw);
+                } catch (_) {
+                    return;
+                }
+                if (!msg || !msg.type) return;
+                if (shouldSkipById(msg.type, msg.data || {})) return;
+                dispatch(msg);
+            }
+
+            function scheduleReconnect() {
+                if (reconnectTimer) return;
+                reconnectTimer = setTimeout(function () {
+                    reconnectTimer = null;
+                    openStream();
+                }, 1500);
+            }
+
+            function openWebSocket() {
+                try {
+                    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const url = proto + '//' + window.location.host + '/events/ws';
+                    const sock = new WebSocket(url);
+                    let openedOk = false;
+
+                    const failTimer = setTimeout(function () {
+                        if (!openedOk) {
+                            try { sock.close(); } catch (_) {}
+                        }
+                    }, 4000);
+
+                    sock.onopen = function () {
+                        openedOk = true;
+                        clearTimeout(failTimer);
+                        wsSocket = sock;
+                        transport = 'ws';
+                    };
+                    sock.onmessage = function (event) {
+                        if (typeof event.data === 'string') {
+                            handleRawMessage(event.data);
+                        }
+                    };
+                    sock.onerror = function () {
+                        if (!openedOk) {
+                            wsFailed = true;
+                        }
+                    };
+                    sock.onclose = function () {
+                        clearTimeout(failTimer);
+                        const wasOpen = wsSocket === sock;
+                        wsSocket = null;
+                        if (transport === 'ws') transport = null;
+                        if (!openedOk && !wasOpen) {
+                            wsFailed = true;
+                            openSSE();
+                            return;
+                        }
+                        scheduleReconnect();
+                    };
+                } catch (_) {
+                    wsFailed = true;
+                    openSSE();
+                }
+            }
+
+            function openSSE() {
+                if (sseSource) return;
+                if (typeof EventSource === 'undefined') return;
+                const src = new EventSource('/events');
+                sseSource = src;
+                transport = 'sse';
+                src.onmessage = function (event) {
+                    handleRawMessage(event.data);
+                };
+                src.onerror = function () {
+                    if (sseSource === src) {
+                        sseSource = null;
+                        if (transport === 'sse') transport = null;
+                    }
+                    try { src.close(); } catch (_) {}
+                    scheduleReconnect();
+                };
+            }
+
+            function openStream() {
+                if (wsSocket || sseSource) return;
+                if (!wsFailed && typeof WebSocket !== 'undefined') {
+                    openWebSocket();
+                    return;
+                }
+                openSSE();
+            }
+
+            function start(opts) {
+                const options = opts || {};
+                const initialRequestId = Number(options.initialRequestId || 0);
+                const initialSentRequestId = Number(options.initialSentRequestId || 0);
+                if (Number.isFinite(initialRequestId) && initialRequestId > maxRequestIdSeen) {
+                    maxRequestIdSeen = initialRequestId;
+                }
+                if (Number.isFinite(initialSentRequestId) && initialSentRequestId > maxSentRequestIdSeen) {
+                    maxSentRequestIdSeen = initialSentRequestId;
+                }
+                openStream();
+                return {
+                    on: function (eventType, handler) {
+                        if (!eventType || typeof handler !== 'function') {
+                            return function () {};
+                        }
+                        const bucket = ensureArrayBucket(eventType);
+                        bucket.push(handler);
+                        return function () {
+                            const next = (listeners.get(eventType) || []).filter(function (fn) { return fn !== handler; });
+                            listeners.set(eventType, next);
+                        };
+                    }
+                };
+            }
+
+            function close() {
+                if (reconnectTimer) {
+                    clearTimeout(reconnectTimer);
+                    reconnectTimer = null;
+                }
+                if (wsSocket) {
+                    try { wsSocket.close(); } catch (_) {}
+                    wsSocket = null;
+                }
+                if (sseSource) {
+                    try { sseSource.close(); } catch (_) {}
+                    sseSource = null;
+                }
+                transport = null;
+            }
+
+            window.addEventListener('beforeunload', close);
+
+            window.liveUpdates = {
+                start: start,
+                close: close,
+                get transport() { return transport; }
+            };
+        })();
+
+        (function () {
             const sidebar = document.getElementById('sidebar');
             const toggle = document.getElementById('menu-toggle');
             const overlay = document.getElementById('sidebar-overlay');

@@ -510,15 +510,12 @@ async function clearLogs(id) {
         }, 250);
     }
 
-    const evtSource = new EventSource('/events');
-    evtSource.onmessage = function(event) {
-        try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'endpoint_changed') {
-                scheduleRefresh();
-            }
-        } catch (_) {}
-    };
+    if (window.liveUpdates && window.liveUpdates.start) {
+        const live = window.liveUpdates.start();
+        live.on('endpoint_changed', function () {
+            scheduleRefresh();
+        });
+    }
 })();
 </script>
 {{end}}

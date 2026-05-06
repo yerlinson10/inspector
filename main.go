@@ -79,8 +79,9 @@ func main() {
 		auth.GET("/send/ws-proxy", handlers.WSProxy)
 		auth.GET("/docs", handlers.DocsPage)
 
-		// SSE
+		// SSE + WS live updates (WS preferred behind tunnels/proxies)
 		auth.GET("/events", handlers.SSEStream)
+		auth.GET("/events/ws", handlers.EventsWebSocket)
 	}
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)

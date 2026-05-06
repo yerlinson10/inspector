@@ -49,11 +49,36 @@ func (h *AuthHandler) HandleLogin(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie(middleware.SessionCookieName, h.SessionValue, 3600*12, "/", "", false, true)
+	secureCookie := isSecureRequest(c)
+	if secureCookie {
+		c.SetSameSite(http.SameSiteNoneMode)
+	} else {
+		c.SetSameSite(http.SameSiteLaxMode)
+	}
+	c.SetCookie(middleware.SessionCookieName, h.SessionValue, 3600*12, "/", "", secureCookie, true)
 	c.Redirect(http.StatusSeeOther, next)
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
-	c.SetCookie(middleware.SessionCookieName, "", -1, "/", "", false, true)
+	secureCookie := isSecureRequest(c)
+	if secureCookie {
+		c.SetSameSite(http.SameSiteNoneMode)
+	} else {
+		c.SetSameSite(http.SameSiteLaxMode)
+	}
+	c.SetCookie(middleware.SessionCookieName, "", -1, "/", "", secureCookie, true)
 	c.Redirect(http.StatusSeeOther, "/login")
+}
+
+func isSecureRequest(c *gin.Context) bool {
+	if c.Request.TLS != nil {
+		return true
+	}
+	if strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https") {
+		return true
+	}
+	if strings.EqualFold(c.GetHeader("X-Forwarded-Ssl"), "on") {
+		return true
+	}
+	return false
 }
