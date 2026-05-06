@@ -1,0 +1,34 @@
+services:
+  inspector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: inspector:latest
+    container_name: inspector
+    command: ["/app/config.yaml"]
+    ports:
+      - "9090:9090"
+    environment:
+      INSPECTOR_ENV: production
+      INSPECTOR_ALLOW_DEFAULT_AUTH: "0"
+      INSPECTOR_DATABASE_PATH: /app/data/inspector.db
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - inspector_data:/app/data
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "/app/inspector", "healthcheck", "http://127.0.0.1:9090/readyz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  inspector_data:

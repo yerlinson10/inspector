@@ -1,7 +1,11 @@
 package storage
 
 import (
+	"fmt"
 	"inspector/internal/models"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -12,6 +16,10 @@ import (
 var DB *gorm.DB
 
 func Init(dbPath string) error {
+	if err := ensureDatabaseDir(dbPath); err != nil {
+		return err
+	}
+
 	var err error
 	DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
@@ -25,6 +33,27 @@ func Init(dbPath string) error {
 		&models.RequestLog{},
 		&models.SentRequest{},
 	)
+}
+
+func ensureDatabaseDir(dbPath string) error {
+	trimmed := strings.TrimSpace(dbPath)
+	if trimmed == "" {
+		return fmt.Errorf("database path is required")
+	}
+	if strings.HasPrefix(trimmed, ":memory:") {
+		return nil
+	}
+
+	dir := filepath.Dir(trimmed)
+	if dir == "." || dir == "" {
+		return nil
+	}
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("failed to create database directory %s: %w", dir, err)
+	}
+
+	return nil
 }
 
 func Cleanup(maxRequests int) {

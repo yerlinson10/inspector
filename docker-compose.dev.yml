@@ -1,0 +1,18 @@
+services:
+  inspector-dev:
+    image: golang:1.26-bookworm
+    container_name: inspector-dev
+    working_dir: /workspace
+    command: ["go", "run", "main.go", "/workspace/config.yaml"]
+    ports:
+      - "9090:9090"
+    environment:
+      INSPECTOR_ENV: development
+      INSPECTOR_DATABASE_PATH: /workspace/data/inspector.db
+    volumes:
+      - ./:/workspace
+      - inspector_dev_data:/workspace/data
+    restart: unless-stopped
+
+volumes:
+  inspector_dev_data:

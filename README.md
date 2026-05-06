@@ -90,9 +90,67 @@ La aplicación estará disponible en `http://localhost:9090` (o el puerto config
 
 ---
 
-## Exposición Pública (sin Docker por ahora)
+## Docker (Producción y Desarrollo)
 
-Actualmente el proyecto **aún no está dockerizado**. Mientras se agrega soporte oficial con Docker, puedes exponer tu instancia local de Inspector de forma segura usando un túnel.
+El proyecto ya incluye dockerización completa con imagen segura `distroless` + ejecución non-root.
+
+### Producción
+
+1. Prepara `config.yaml` local (puedes partir de `config.example.yaml`).
+2. Construye y levanta:
+
+```bash
+docker compose up -d --build
+```
+
+3. Verifica estado:
+
+```bash
+docker compose ps
+docker compose logs -f inspector
+```
+
+El compose de producción usa:
+- volumen persistente `inspector_data` para SQLite
+- `read_only` root filesystem + `tmpfs` para endurecimiento
+- `healthcheck` real contra `/readyz`
+- variables seguras de producción (`INSPECTOR_ENV=production`, bloqueo de credenciales default)
+
+Credenciales del dashboard en Docker Compose (producción):
+- `INSPECTOR_AUTH_USERNAME` (default: `inspector-admin`)
+- `INSPECTOR_AUTH_PASSWORD` (default: `change-this-password-now`)
+
+Puedes sobreescribirlas antes de levantar:
+
+```bash
+export INSPECTOR_AUTH_USERNAME="admin-prod"
+export INSPECTOR_AUTH_PASSWORD="tu-clave-segura"
+docker compose up -d --build
+```
+
+### Desarrollo
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+Este modo monta el código fuente y ejecuta `go run` dentro del contenedor para iteración rápida.
+
+### Comandos Make (opcional)
+
+```bash
+make docker-build
+make docker-up
+make docker-down
+make docker-dev-up
+make docker-dev-down
+```
+
+---
+
+## Exposición Pública (con o sin Docker)
+
+Puedes exponer tu instancia de Inspector de forma segura usando un túnel (ngrok/localtunnel/Cloudflare), ya sea ejecutando localmente o en contenedor.
 
 Antes de empezar, levanta la app localmente:
 
@@ -282,6 +340,32 @@ Se puede pasar un archivo de configuración alternativo como argumento:
 ./inspector config.production.yaml
 ```
 
+### Overrides por variables de entorno
+
+Además del YAML, puedes sobreescribir configuración con variables de entorno:
+
+- `INSPECTOR_SERVER_HOST`
+- `INSPECTOR_SERVER_PORT`
+- `INSPECTOR_AUTH_USERNAME`
+- `INSPECTOR_AUTH_PASSWORD`
+- `INSPECTOR_DATABASE_PATH`
+- `INSPECTOR_SETTINGS_MAX_REQUESTS`
+- `INSPECTOR_SETTINGS_MAX_REQUEST_BODY_BYTES`
+- `INSPECTOR_SETTINGS_MAX_RESPONSE_BODY_BYTES`
+- `INSPECTOR_SETTINGS_CLEANUP_INTERVAL_SECONDS`
+- `INSPECTOR_SETTINGS_SESSION_TTL_HOURS`
+- `INSPECTOR_SETTINGS_ALLOWED_WS_ORIGINS` (CSV)
+- `INSPECTOR_SETTINGS_REDACTION_ENABLED`
+- `INSPECTOR_SETTINGS_REDACTION_HEADERS` (CSV)
+- `INSPECTOR_SETTINGS_REDACTION_FIELDS` (CSV)
+- `INSPECTOR_SETTINGS_ALERT_WEBHOOK_URL`
+- `INSPECTOR_SETTINGS_ALERT_MIN_SENT_STATUS`
+- `INSPECTOR_SETTINGS_ALERT_ON_SENT_ERROR`
+
+Variables operativas adicionales:
+- `INSPECTOR_ENV` (ej. `production`)
+- `INSPECTOR_ALLOW_DEFAULT_AUTH` (`1` solo si deseas permitir credenciales default en producción)
+
 ---
 
 ## Uso
@@ -350,6 +434,8 @@ curl -X POST http://localhost:9090/in/mi-endpoint \
 |--------|------|-------------|
 | `ANY` | `/in/:slug` | Recibe cualquier petición HTTP en el endpoint |
 | `GET` | `/in/:slug/ws` | Upgrade a WebSocket en el endpoint |
+| `GET` | `/healthz` | Liveness probe del servicio |
+| `GET` | `/readyz` | Readiness probe (incluye chequeo de DB) |
 | `GET` | `/login` | Página de login |
 | `POST` | `/login` | Procesa credenciales y crea sesión |
 | `GET` | `/logout` | Cierra sesión y elimina cookie |

@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"inspector/internal/config"
@@ -19,6 +24,10 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && strings.EqualFold(strings.TrimSpace(os.Args[1]), "healthcheck") {
+		os.Exit(runHealthcheckCLI(os.Args[2:]))
+	}
+
 	// Load config
 	cfgPath := "config.yaml"
 	if len(os.Args) > 1 {
@@ -79,6 +88,8 @@ func main() {
 		public.Any("/:slug", handlers.ReceiveRequest)
 		public.GET("/:slug/ws", handlers.ReceiveWebSocket)
 	}
+	r.GET("/healthz", handlers.Healthz)
+	r.GET("/readyz", handlers.Readyz)
 	r.GET("/login", authHandler.ShowLogin)
 	r.POST("/login", authHandler.HandleLogin)
 	r.GET("/logout", authHandler.Logout)
@@ -124,9 +135,56 @@ func main() {
 	log.Printf("Auth user: %s", cfg.Auth.Username)
 	log.Printf("Public endpoints: http://%s/in/<slug>", addr)
 
-	if err := r.Run(addr); err != nil {
-		log.Fatalf("Server failed: %v", err)
+	server := &http.Server{
+		Addr:    addr,
+		Handler: r,
 	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- server.ListenAndServe()
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case err := <-errCh:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Server failed: %v", err)
+		}
+	case sig := <-sigCh:
+		log.Printf("Shutting down server due to signal: %s", sig.String())
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Graceful shutdown failed: %v", err)
+	}
+}
+
+func runHealthcheckCLI(args []string) int {
+	target := "http://127.0.0.1:9090/readyz"
+	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+		target = strings.TrimSpace(args[0])
+	}
+
+	client := &http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Get(target)
+	if err != nil {
+		log.Printf("healthcheck failed: %v", err)
+		return 1
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		log.Printf("healthcheck returned status %d", resp.StatusCode)
+		return 1
+	}
+
+	return 0
 }
 
 func isDefaultCredentials(cfg *config.Config) bool {
