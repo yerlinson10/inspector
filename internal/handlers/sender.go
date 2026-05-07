@@ -98,6 +98,35 @@ func SendHTTP(c *gin.Context) {
 		return
 	}
 
+	parsedHeaders, headerParseErr := parseSenderHeadersJSON(headersRaw)
+	if headerParseErr != nil {
+		c.HTML(http.StatusBadRequest, "sender.html", withViewData(c, gin.H{
+			"ContentTemplate": "sender_content",
+			"error":           headerParseErr.Error(),
+			"title":           "Send Request",
+			"method":          method,
+			"url":             url,
+			"headers":         headersRaw,
+			"body":            body,
+			"type":            reqType,
+		}))
+		return
+	}
+
+	if bodyErr := validateSenderBodyJSON(body); bodyErr != nil {
+		c.HTML(http.StatusBadRequest, "sender.html", withViewData(c, gin.H{
+			"ContentTemplate": "sender_content",
+			"error":           bodyErr.Error(),
+			"title":           "Send Request",
+			"method":          method,
+			"url":             url,
+			"headers":         headersRaw,
+			"body":            body,
+			"type":            reqType,
+		}))
+		return
+	}
+
 	// Build request
 	var reqBody io.Reader
 	if body != "" {
@@ -121,21 +150,8 @@ func SendHTTP(c *gin.Context) {
 	}
 
 	// Parse headers
-	if headersRaw != "" {
-		var headers map[string]string
-		if err := json.Unmarshal([]byte(headersRaw), &headers); err == nil {
-			for k, v := range headers {
-				httpReq.Header.Set(k, v)
-			}
-		} else {
-			// Try line-by-line format: Key: Value
-			for _, line := range strings.Split(headersRaw, "\n") {
-				parts := strings.SplitN(strings.TrimSpace(line), ":", 2)
-				if len(parts) == 2 {
-					httpReq.Header.Set(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
-				}
-			}
-		}
+	for k, v := range parsedHeaders {
+		httpReq.Header.Set(k, v)
 	}
 
 	client := newOutboundHTTPClient(30 * time.Second)
@@ -224,6 +240,44 @@ func SendHTTP(c *gin.Context) {
 		"sent_id":         sent.ID,
 		"success":         true,
 	}))
+}
+
+func parseSenderHeadersJSON(raw string) (map[string]string, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return map[string]string{}, nil
+	}
+
+	var headers map[string]string
+	if err := json.Unmarshal([]byte(trimmed), &headers); err != nil {
+		return nil, fmt.Errorf("headers must be a valid JSON object with string values")
+	}
+
+	if headers == nil {
+		return map[string]string{}, nil
+	}
+
+	for key := range headers {
+		if strings.TrimSpace(key) == "" {
+			return nil, fmt.Errorf("headers must not contain empty keys")
+		}
+	}
+
+	return headers, nil
+}
+
+func validateSenderBodyJSON(raw string) error {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil
+	}
+
+	var body interface{}
+	if err := json.Unmarshal([]byte(trimmed), &body); err != nil {
+		return fmt.Errorf("body must be valid JSON")
+	}
+
+	return nil
 }
 
 func SentHistory(c *gin.Context) {

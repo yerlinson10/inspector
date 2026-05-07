@@ -44,12 +44,12 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-400 mb-1">Headers (JSON or Key: Value per line)</label>
-                    <textarea name="headers" rows="4" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'>{{.headers}}</textarea>
+                    <label class="block text-sm text-gray-400 mb-1">Headers (JSON objeto)</label>
+                    <textarea name="headers" rows="4" data-json-editor data-json-require-object="true" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'>{{.headers}}</textarea>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-400 mb-1">Body</label>
-                    <textarea name="body" rows="8" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"key": "value"}'>{{.body}}</textarea>
+                    <label class="block text-sm text-gray-400 mb-1">Body (JSON)</label>
+                    <textarea name="body" rows="8" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"key": "value"}'>{{.body}}</textarea>
                 </div>
                 <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-6 py-2 rounded font-medium transition w-full">Send Request</button>
             </div>
@@ -75,4 +75,87 @@
         {{end}}
     </div>
 </div>
+
+<script>
+(() => {
+    if (window.jsonEditorTools) {
+        window.jsonEditorTools.init(document);
+    }
+
+    const form = document.querySelector('form[action="/send/http"]');
+    if (!form) return;
+
+    const headersField = form.querySelector('textarea[name="headers"]');
+    const bodyField = form.querySelector('textarea[name="body"]');
+
+    function validateJSONField(field, options) {
+        if (!field) return { ok: true };
+
+        if (window.jsonEditorTools && typeof window.jsonEditorTools.validateField === 'function') {
+            return window.jsonEditorTools.validateField(field, options || {});
+        }
+
+        const raw = String(field.value || '').trim();
+        if (!raw) {
+            if (options && options.allowEmpty) return { ok: true };
+            return { ok: false, message: (options && options.emptyMessage) || 'Campo JSON vacio.' };
+        }
+
+        try {
+            const parsed = JSON.parse(raw);
+            if (options && options.requireObject && (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed))) {
+                return { ok: false, message: options.invalidObjectMessage || 'Debe ser un objeto JSON.' };
+            }
+            if (options && options.requireStringValues && parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                const invalidValue = Object.values(parsed).some(function(value) {
+                    return typeof value !== 'string';
+                });
+                if (invalidValue) {
+                    return { ok: false, message: options.invalidStringValuesMessage || 'Todos los valores deben ser texto.' };
+                }
+            }
+            return { ok: true };
+        } catch (_) {
+            return { ok: false, message: (options && options.invalidJSONMessage) || 'JSON invalido.' };
+        }
+    }
+
+    function focusField(field) {
+        if (!field) return;
+        if (window.jsonEditorTools && typeof window.jsonEditorTools.focusField === 'function') {
+            window.jsonEditorTools.focusField(field);
+            return;
+        }
+        field.focus();
+    }
+
+    form.addEventListener('submit', async function(event) {
+        const headersValidation = validateJSONField(headersField, {
+            allowEmpty: true,
+            requireObject: true,
+            requireStringValues: true,
+            invalidJSONMessage: 'Headers debe ser un JSON valido.',
+            invalidObjectMessage: 'Headers debe ser un objeto JSON.',
+            invalidStringValuesMessage: 'Headers debe contener solo valores de texto.'
+        });
+        if (!headersValidation.ok) {
+            event.preventDefault();
+            await window.appAlert(headersValidation.message || 'Headers invalido.', 'Validacion');
+            focusField(headersField);
+            return;
+        }
+
+        const bodyValidation = validateJSONField(bodyField, {
+            allowEmpty: true,
+            requireObject: false,
+            invalidJSONMessage: 'Body debe ser un JSON valido.'
+        });
+        if (!bodyValidation.ok) {
+            event.preventDefault();
+            await window.appAlert(bodyValidation.message || 'Body invalido.', 'Validacion');
+            focusField(bodyField);
+        }
+    });
+})();
+</script>
 {{end}}

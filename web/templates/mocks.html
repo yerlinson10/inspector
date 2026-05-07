@@ -135,7 +135,7 @@
                             <option value="contains">contains</option>
                             <option value="exact">exact</option>
                         </select>
-                        <textarea name="query_json" rows="2" placeholder='{"event":"deploy"}' class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none"></textarea>
+                        <textarea name="query_json" rows="2" placeholder='{"event":"deploy"}' data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none"></textarea>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-400 mb-1">Headers mode + JSON</label>
@@ -144,7 +144,7 @@
                             <option value="contains">contains</option>
                             <option value="exact">exact</option>
                         </select>
-                        <textarea name="headers_json" rows="2" placeholder='{"X-Env":"prod"}' class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none"></textarea>
+                        <textarea name="headers_json" rows="2" placeholder='{"X-Env":"prod"}' data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none"></textarea>
                     </div>
                 </div>
 
@@ -161,7 +161,7 @@
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-xs text-gray-400 mb-1">Body pattern</label>
-                        <textarea name="body_pattern" rows="2" placeholder='{"status":"ok"}' class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none"></textarea>
+                        <textarea name="body_pattern" rows="2" placeholder='{"status":"ok"}' data-json-editor data-json-mode-field="body_mode" data-json-mode-value="json" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none"></textarea>
                     </div>
                 </div>
             </div>
@@ -187,11 +187,11 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm text-gray-400 mb-1">Response headers (JSON)</label>
-                <textarea name="response_headers" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{"Content-Type":"application/json"}</textarea>
+                <textarea name="response_headers" rows="3" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{"Content-Type":"application/json"}</textarea>
             </div>
             <div>
                 <label class="block text-sm text-gray-400 mb-1">Response body (JSON)</label>
-                <textarea name="response_body" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{"status":"mocked"}</textarea>
+                <textarea name="response_body" rows="3" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{"status":"mocked"}</textarea>
             </div>
         </div>
 
@@ -317,7 +317,7 @@
                                         <option value="contains" {{if eq .Rule.QueryMode "contains"}}selected{{end}}>contains</option>
                                         <option value="exact" {{if eq .Rule.QueryMode "exact"}}selected{{end}}>exact</option>
                                     </select>
-                                    <textarea name="query_json" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.QueryJSON}}</textarea>
+                                    <textarea name="query_json" rows="2" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.QueryJSON}}</textarea>
                                 </div>
                                 <div>
                                     <label class="block text-xs text-gray-400 mb-1">Headers mode + JSON</label>
@@ -326,7 +326,7 @@
                                         <option value="contains" {{if eq .Rule.HeadersMode "contains"}}selected{{end}}>contains</option>
                                         <option value="exact" {{if eq .Rule.HeadersMode "exact"}}selected{{end}}>exact</option>
                                     </select>
-                                    <textarea name="headers_json" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.HeadersJSON}}</textarea>
+                                    <textarea name="headers_json" rows="2" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.HeadersJSON}}</textarea>
                                 </div>
                             </div>
 
@@ -343,7 +343,7 @@
                                 </div>
                                 <div class="md:col-span-2">
                                     <label class="block text-xs text-gray-400 mb-1">Body pattern</label>
-                                    <textarea name="body_pattern" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.BodyPattern}}</textarea>
+                                    <textarea name="body_pattern" rows="2" data-json-editor data-json-mode-field="body_mode" data-json-mode-value="json" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.BodyPattern}}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -369,11 +369,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm text-gray-400 mb-1">Response headers (JSON)</label>
-                            <textarea name="response_headers" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseHeaders}}</textarea>
+                            <textarea name="response_headers" rows="3" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseHeaders}}</textarea>
                         </div>
                         <div>
                             <label class="block text-sm text-gray-400 mb-1">Response body (JSON)</label>
-                            <textarea name="response_body" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseBody}}</textarea>
+                            <textarea name="response_body" rows="3" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseBody}}</textarea>
                         </div>
                     </div>
                     <div class="flex justify-end">
@@ -462,7 +462,7 @@
                                         <option value="contains" {{if eq .Rule.QueryMode "contains"}}selected{{end}}>contains</option>
                                         <option value="exact" {{if eq .Rule.QueryMode "exact"}}selected{{end}}>exact</option>
                                     </select>
-                                    <textarea name="query_json" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.QueryJSON}}</textarea>
+                                    <textarea name="query_json" rows="2" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.QueryJSON}}</textarea>
                                 </div>
                                 <div>
                                     <label class="block text-xs text-gray-400 mb-1">Headers mode + JSON</label>
@@ -471,7 +471,7 @@
                                         <option value="contains" {{if eq .Rule.HeadersMode "contains"}}selected{{end}}>contains</option>
                                         <option value="exact" {{if eq .Rule.HeadersMode "exact"}}selected{{end}}>exact</option>
                                     </select>
-                                    <textarea name="headers_json" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.HeadersJSON}}</textarea>
+                                    <textarea name="headers_json" rows="2" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.HeadersJSON}}</textarea>
                                 </div>
                             </div>
 
@@ -488,7 +488,7 @@
                                 </div>
                                 <div class="md:col-span-2">
                                     <label class="block text-xs text-gray-400 mb-1">Body pattern</label>
-                                    <textarea name="body_pattern" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.BodyPattern}}</textarea>
+                                    <textarea name="body_pattern" rows="2" data-json-editor data-json-mode-field="body_mode" data-json-mode-value="json" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.BodyPattern}}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -514,11 +514,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm text-gray-400 mb-1">Response headers (JSON)</label>
-                            <textarea name="response_headers" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseHeaders}}</textarea>
+                            <textarea name="response_headers" rows="3" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseHeaders}}</textarea>
                         </div>
                         <div>
                             <label class="block text-sm text-gray-400 mb-1">Response body (JSON)</label>
-                            <textarea name="response_body" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseBody}}</textarea>
+                            <textarea name="response_body" rows="3" data-json-editor class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseBody}}</textarea>
                         </div>
                     </div>
                     <div class="flex justify-end">
@@ -702,6 +702,9 @@ function openEditModal(templateId) {
     editModalLastFocused = document.activeElement;
     body.innerHTML = tpl.innerHTML;
     initCustomMultiSelects(body);
+    if (window.jsonEditorTools) {
+        window.jsonEditorTools.init(body);
+    }
 
     const editForm = body.querySelector('form');
     if (editForm) {
@@ -711,8 +714,12 @@ function openEditModal(templateId) {
 
             event.preventDefault();
             await window.appAlert(validation.message || 'Formulario invalido.', 'Validacion');
-            if (validation.field && typeof validation.field.focus === 'function') {
-                validation.field.focus();
+            if (validation.field) {
+                if (window.jsonEditorTools && typeof window.jsonEditorTools.focusField === 'function') {
+                    window.jsonEditorTools.focusField(validation.field);
+                } else if (typeof validation.field.focus === 'function') {
+                    validation.field.focus();
+                }
             }
         });
     }
@@ -898,6 +905,10 @@ function initCustomMultiSelects(scopeRoot) {
 }
 
 (function() {
+    if (window.jsonEditorTools) {
+        window.jsonEditorTools.init(document);
+    }
+
     const scopeSelect = document.getElementById('scope-select');
     const endpointWrap = document.getElementById('endpoint-select-wrap');
     const createForm = document.getElementById('mock-create-form');
@@ -1096,8 +1107,12 @@ function initCustomMultiSelects(scopeRoot) {
             if (!validation.ok) {
                 event.preventDefault();
                 await window.appAlert(validation.message || 'Formulario invalido.', 'Validacion');
-                if (validation.field && typeof validation.field.focus === 'function') {
-                    validation.field.focus();
+                if (validation.field) {
+                    if (window.jsonEditorTools && typeof window.jsonEditorTools.focusField === 'function') {
+                        window.jsonEditorTools.focusField(validation.field);
+                    } else if (typeof validation.field.focus === 'function') {
+                        validation.field.focus();
+                    }
                 }
                 return;
             }

@@ -16,7 +16,7 @@
             </div>
             <div>
                 <label class="block text-sm text-gray-400 mb-1">Message</label>
-                <textarea id="ws-message" rows="4" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"action": "ping"}'></textarea>
+                <textarea id="ws-message" rows="4" data-json-editor data-json-key="ws_message" data-json-allow-empty="false" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"action": "ping"}'></textarea>
             </div>
             <button onclick="sendMessage()" id="btn-send" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-medium transition w-full" disabled>Send Message</button>
         </div>
@@ -36,6 +36,65 @@
 
 <script>
 let ws = null;
+const wsMessageField = document.getElementById('ws-message');
+const wsSendButton = document.getElementById('btn-send');
+
+if (window.jsonEditorTools) {
+    window.jsonEditorTools.init(document);
+}
+
+if (wsMessageField) {
+    wsMessageField.addEventListener('input', syncSendButtonState);
+}
+
+function validateWSMessage(showAlert) {
+    if (!wsMessageField) {
+        return { ok: false, message: 'Campo de mensaje no disponible.' };
+    }
+
+    let result;
+    if (window.jsonEditorTools && typeof window.jsonEditorTools.validateField === 'function') {
+        result = window.jsonEditorTools.validateField(wsMessageField, {
+            allowEmpty: false,
+            requireObject: false,
+            emptyMessage: 'Message no puede estar vacio.',
+            invalidJSONMessage: 'Message debe ser un JSON valido.'
+        });
+    } else {
+        const raw = String(wsMessageField.value || '').trim();
+        if (!raw) {
+            result = { ok: false, message: 'Message no puede estar vacio.' };
+        } else {
+            try {
+                JSON.parse(raw);
+                result = { ok: true };
+            } catch (_) {
+                result = { ok: false, message: 'Message debe ser un JSON valido.' };
+            }
+        }
+    }
+
+    if (showAlert && !result.ok) {
+        window.appAlert(result.message || 'Message invalido.', 'Validacion');
+        if (window.jsonEditorTools && typeof window.jsonEditorTools.focusField === 'function') {
+            window.jsonEditorTools.focusField(wsMessageField);
+        } else {
+            wsMessageField.focus();
+        }
+    }
+
+    return result;
+}
+
+function syncSendButtonState() {
+    if (!wsSendButton) return;
+    if (!ws) {
+        wsSendButton.disabled = true;
+        return;
+    }
+    const validation = validateWSMessage(false);
+    wsSendButton.disabled = !validation.ok;
+}
 
 function connectWS() {
     const url = document.getElementById('ws-url').value.trim();
@@ -59,7 +118,7 @@ function connectWS() {
         document.getElementById('ws-status').className = 'flex items-center px-3 text-sm text-emerald-400';
         document.getElementById('btn-connect').classList.add('hidden');
         document.getElementById('btn-disconnect').classList.remove('hidden');
-        document.getElementById('btn-send').disabled = false;
+        syncSendButtonState();
         addMessage('system', 'Connected to ' + url);
     };
 
@@ -72,9 +131,9 @@ function connectWS() {
         document.getElementById('ws-status').className = 'flex items-center px-3 text-sm text-gray-400';
         document.getElementById('btn-connect').classList.remove('hidden');
         document.getElementById('btn-disconnect').classList.add('hidden');
-        document.getElementById('btn-send').disabled = true;
         addMessage('system', 'Connection closed');
         ws = null;
+        syncSendButtonState();
     };
 
     ws.onerror = function() {
@@ -88,11 +147,22 @@ function disconnectWS() {
 
 function sendMessage() {
     if (!ws) return;
-    const msg = document.getElementById('ws-message').value;
-    if (!msg) return;
+    const validation = validateWSMessage(true);
+    if (!validation.ok) return;
+
+    const msg = window.jsonEditorTools && wsMessageField
+        ? window.jsonEditorTools.getValue(wsMessageField)
+        : document.getElementById('ws-message').value;
+    if (!msg || !msg.trim()) return;
+
     ws.send(msg);
     addMessage('sent', msg);
-    document.getElementById('ws-message').value = '';
+    if (window.jsonEditorTools && wsMessageField) {
+        window.jsonEditorTools.setValue(wsMessageField, '');
+    } else {
+        document.getElementById('ws-message').value = '';
+    }
+    syncSendButtonState();
 }
 
 function addMessage(type, text) {
@@ -123,5 +193,7 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+syncSendButtonState();
 </script>
 {{end}}

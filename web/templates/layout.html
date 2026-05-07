@@ -11,6 +11,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/ace-builds@1.36.5/src-noconflict/ace.js"></script>
     <style>
         [x-cloak] { display: none !important; }
         .fade-in { animation: fadeIn 0.3s ease-in; }
@@ -94,6 +95,129 @@
             background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.9));
             border: 1px solid rgba(71, 85, 105, 0.9);
             box-shadow: 0 28px 60px rgba(0, 0, 0, 0.45);
+        }
+
+        .json-editor-shell {
+            border: 1px solid #4b5563;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background: #111827;
+        }
+
+        .json-editor-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.5rem 0.625rem;
+            border-bottom: 1px solid rgba(75, 85, 99, 0.8);
+            background: linear-gradient(180deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.9));
+        }
+
+        .json-editor-toolbar button {
+            border: 1px solid rgba(75, 85, 99, 0.95);
+            border-radius: 0.375rem;
+            background: #1f2937;
+            color: #d1d5db;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            padding: 0.275rem 0.55rem;
+            transition: all 0.15s ease;
+        }
+
+        .json-editor-toolbar button:hover {
+            border-color: rgba(16, 185, 129, 0.72);
+            color: #ecfeff;
+            background: rgba(16, 185, 129, 0.18);
+        }
+
+        .json-editor-toolbar button:disabled {
+            cursor: not-allowed;
+            opacity: 0.45;
+        }
+
+        .json-editor-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #9ca3af;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+        }
+
+        .json-editor-badge {
+            border-radius: 9999px;
+            border: 1px solid rgba(16, 185, 129, 0.45);
+            background: rgba(16, 185, 129, 0.13);
+            color: #6ee7b7;
+            padding: 0.08rem 0.45rem;
+            font-size: 0.63rem;
+            line-height: 1;
+        }
+
+        .json-editor-badge-readonly {
+            border-color: rgba(148, 163, 184, 0.5);
+            background: rgba(148, 163, 184, 0.15);
+            color: #cbd5e1;
+        }
+
+        .json-editor-status {
+            min-height: 1.4rem;
+            padding: 0.3rem 0.65rem 0.45rem;
+            font-size: 0.72rem;
+        }
+
+        .json-editor-status.status-idle {
+            color: #6b7280;
+        }
+
+        .json-editor-status.status-success {
+            color: #34d399;
+        }
+
+        .json-editor-status.status-warn {
+            color: #fbbf24;
+        }
+
+        .json-editor-status.status-error {
+            color: #f87171;
+        }
+
+        .json-editor-host {
+            width: 100%;
+            min-height: 120px;
+            transition: height 0.2s ease;
+        }
+
+        .json-editor-shell .json-editor-fallback {
+            width: 100%;
+            border: 0;
+            border-radius: 0;
+            padding: 0.75rem;
+            background: #0b1220;
+            color: #e5e7eb;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.78rem;
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .json-editor-shell .ace_editor {
+            font-size: 13px;
+            line-height: 1.45;
+            background: #0b1220;
+        }
+
+        .json-editor-shell .ace_gutter {
+            background: #0f172a;
+            color: #64748b;
+        }
+
+        .json-editor-shell .ace_marker-layer .ace_active-line {
+            background: rgba(56, 189, 248, 0.08);
         }
     </style>
 </head>
@@ -281,6 +405,963 @@
                     isConfirm: true
                 });
             };
+        })();
+
+        (function () {
+            if (window.jsonEditorTools) return;
+
+            const instances = new WeakMap();
+            const defaultConfigByKey = {
+                query_json: {
+                    title: 'query_json',
+                    allowEmpty: true,
+                    requireObject: true,
+                    requireStringValues: true,
+                    example: { event: 'deploy' }
+                },
+                headers_json: {
+                    title: 'headers_json',
+                    allowEmpty: true,
+                    requireObject: true,
+                    requireStringValues: true,
+                    example: { 'X-Env': 'prod' }
+                },
+                body_pattern: {
+                    title: 'body_pattern',
+                    allowEmpty: true,
+                    requireObject: true,
+                    requireStringValues: false,
+                    modeField: 'body_mode',
+                    modeValue: 'json',
+                    example: { status: 'ok' }
+                },
+                response_headers: {
+                    title: 'response_headers',
+                    allowEmpty: true,
+                    requireObject: true,
+                    requireStringValues: false,
+                    example: { 'Content-Type': 'application/json' }
+                },
+                response_body: {
+                    title: 'response_body',
+                    allowEmpty: true,
+                    requireObject: false,
+                    requireStringValues: false,
+                    example: { status: 'ok' }
+                },
+                headers: {
+                    title: 'headers',
+                    allowEmpty: true,
+                    requireObject: true,
+                    requireStringValues: true,
+                    example: { 'Content-Type': 'application/json' }
+                },
+                body: {
+                    title: 'body',
+                    allowEmpty: true,
+                    requireObject: false,
+                    requireStringValues: false,
+                    example: { key: 'value' }
+                },
+                ws_message: {
+                    title: 'ws-message',
+                    allowEmpty: false,
+                    requireObject: false,
+                    requireStringValues: false,
+                    example: { action: 'ping' }
+                }
+            };
+
+            function parseBoolean(value, fallback) {
+                if (typeof value !== 'string') return fallback;
+                const normalized = value.trim().toLowerCase();
+                if (!normalized) return fallback;
+                if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') return true;
+                if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') return false;
+                return fallback;
+            }
+
+            function normalizeFieldKey(field) {
+                if (!(field instanceof HTMLTextAreaElement)) return '';
+                const dataKey = String(field.dataset.jsonKey || '').trim();
+                if (dataKey) return dataKey;
+                const name = String(field.getAttribute('name') || '').trim();
+                if (name) return name;
+                const id = String(field.id || '').trim();
+                if (!id) return '';
+                return id.replace(/-/g, '_');
+            }
+
+            function parseExample(raw) {
+                if (typeof raw !== 'string') return undefined;
+                const trimmed = raw.trim();
+                if (!trimmed) return undefined;
+                try {
+                    return JSON.parse(trimmed);
+                } catch (_) {
+                    return trimmed;
+                }
+            }
+
+            function mergeConfig(field, overrides) {
+                const key = normalizeFieldKey(field);
+                const base = defaultConfigByKey[key] || {};
+                const data = field.dataset || {};
+                const cfg = Object.assign({}, base, overrides || {});
+                const htmlReadOnly = field.hasAttribute('readonly');
+
+                cfg.title = String(data.jsonTitle || cfg.title || field.getAttribute('name') || field.id || 'JSON').trim();
+                cfg.allowEmpty = parseBoolean(data.jsonAllowEmpty, cfg.allowEmpty !== undefined ? cfg.allowEmpty : true);
+                cfg.requireObject = parseBoolean(data.jsonRequireObject, !!cfg.requireObject);
+                cfg.requireStringValues = parseBoolean(data.jsonRequireStringValues, !!cfg.requireStringValues);
+                cfg.readOnly = parseBoolean(data.jsonReadonly, cfg.readOnly !== undefined ? !!cfg.readOnly : htmlReadOnly);
+                cfg.showActionButtons = parseBoolean(data.jsonShowActions, cfg.showActionButtons !== undefined ? !!cfg.showActionButtons : !cfg.readOnly);
+                cfg.showCopyButton = parseBoolean(data.jsonShowCopy, cfg.showCopyButton !== undefined ? !!cfg.showCopyButton : true);
+                cfg.showExpandButton = parseBoolean(data.jsonShowExpand, cfg.showExpandButton !== undefined ? !!cfg.showExpandButton : true);
+                cfg.editorMode = String(data.jsonEditorMode || cfg.editorMode || (cfg.readOnly ? 'auto' : 'json')).trim().toLowerCase();
+                if (!cfg.editorMode) {
+                    cfg.editorMode = cfg.readOnly ? 'auto' : 'json';
+                }
+
+                const dataModeField = String(data.jsonModeField || '').trim();
+                const dataModeValue = String(data.jsonModeValue || '').trim().toLowerCase();
+                cfg.modeField = dataModeField || String(cfg.modeField || '').trim();
+                cfg.modeValue = dataModeValue || String(cfg.modeValue || '').trim().toLowerCase() || 'json';
+
+                if (data.jsonExample !== undefined) {
+                    cfg.example = parseExample(data.jsonExample);
+                } else if (cfg.example === undefined) {
+                    cfg.example = base.example;
+                }
+
+                return cfg;
+            }
+
+            function isPlainObject(value) {
+                return value !== null && typeof value === 'object' && !Array.isArray(value);
+            }
+
+            function escapeAttrValue(value) {
+                return String(value || '')
+                    .replace(/\\/g, '\\\\')
+                    .replace(/"/g, '\\"');
+            }
+
+            function isModeActive(field, cfg) {
+                if (!cfg.modeField) return true;
+                const scope = field.form || field.closest('form') || document;
+                const selector = '[name="' + escapeAttrValue(cfg.modeField) + '"]';
+                const control = scope.querySelector(selector);
+                if (!control) return true;
+                const current = String(control.value || '').trim().toLowerCase();
+                const expected = String(cfg.modeValue || 'json').trim().toLowerCase();
+                return current === expected;
+            }
+
+            function resolveAceMode(value, cfg) {
+                const preferred = String((cfg && cfg.editorMode) || 'json').trim().toLowerCase();
+                if (preferred === 'text') return 'ace/mode/text';
+                if (preferred === 'json') return 'ace/mode/json';
+
+                const raw = String(value || '').trim();
+                if (!raw) return 'ace/mode/json';
+                try {
+                    JSON.parse(raw);
+                    return 'ace/mode/json';
+                } catch (_) {
+                    return 'ace/mode/text';
+                }
+            }
+
+            function getEditorValue(field) {
+                const instance = instances.get(field);
+                if (instance && instance.editor) {
+                    return instance.editor.getValue();
+                }
+                return field.value || '';
+            }
+
+            function setEditorValue(field, value) {
+                const normalized = typeof value === 'string' ? value : String(value || '');
+                const instance = instances.get(field);
+                if (instance && instance.editor) {
+                    instance.editor.setValue(normalized, -1);
+                }
+                field.value = normalized;
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            function focusEditor(field) {
+                const instance = instances.get(field);
+                if (instance && instance.editor) {
+                    instance.editor.focus();
+                    return;
+                }
+                if (typeof field.focus === 'function') field.focus();
+            }
+
+            function buildValidationMessage(kind, cfg, overrides) {
+                if (kind === 'empty') {
+                    return overrides.emptyMessage || cfg.emptyMessage || (cfg.title + ' no puede estar vacio.');
+                }
+                if (kind === 'json') {
+                    return overrides.invalidJSONMessage || cfg.invalidJSONMessage || (cfg.title + ' debe ser JSON valido.');
+                }
+                if (kind === 'object') {
+                    return overrides.invalidObjectMessage || cfg.invalidObjectMessage || (cfg.title + ' debe ser un objeto JSON.');
+                }
+                if (kind === 'strings') {
+                    return overrides.invalidStringValuesMessage || cfg.invalidStringValuesMessage || (cfg.title + ' debe contener solo valores de texto.');
+                }
+                return 'JSON invalido.';
+            }
+
+            function validateParsedValue(parsed, cfg, overrides, field) {
+                if (cfg.requireObject && !isPlainObject(parsed)) {
+                    return {
+                        ok: false,
+                        message: buildValidationMessage('object', cfg, overrides),
+                        field: field
+                    };
+                }
+
+                if (cfg.requireStringValues && isPlainObject(parsed)) {
+                    const invalid = Object.values(parsed).some(function (value) {
+                        return typeof value !== 'string';
+                    });
+                    if (invalid) {
+                        return {
+                            ok: false,
+                            message: buildValidationMessage('strings', cfg, overrides),
+                            field: field
+                        };
+                    }
+                }
+
+                return { ok: true, parsed: parsed };
+            }
+
+            function validateText(raw, cfg, overrides, field) {
+                const text = String(raw || '');
+                const trimmed = text.trim();
+                if (!trimmed) {
+                    if (cfg.allowEmpty) {
+                        return { ok: true, empty: true, field: field };
+                    }
+                    return {
+                        ok: false,
+                        message: buildValidationMessage('empty', cfg, overrides),
+                        field: field
+                    };
+                }
+
+                let parsed;
+                try {
+                    parsed = JSON.parse(trimmed);
+                } catch (_) {
+                    return {
+                        ok: false,
+                        message: buildValidationMessage('json', cfg, overrides),
+                        field: field
+                    };
+                }
+
+                const checked = validateParsedValue(parsed, cfg, overrides, field);
+                if (!checked.ok) return checked;
+
+                return {
+                    ok: true,
+                    parsed: parsed,
+                    field: field
+                };
+            }
+
+            function normalizeQuotes(input) {
+                return String(input || '')
+                    .replace(/^\uFEFF/, '')
+                    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+                    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+                    .replace(/\u00A0/g, ' ');
+            }
+
+            function stripCodeFence(input) {
+                return String(input || '')
+                    .replace(/^\s*```(?:json|javascript|js)?\s*/i, '')
+                    .replace(/\s*```\s*$/i, '')
+                    .trim();
+            }
+
+            function stripComments(input) {
+                return String(input || '')
+                    .replace(/\/\*[\s\S]*?\*\//g, '')
+                    .replace(/^\s*\/\/.*$/gm, '');
+            }
+
+            function stripEdgeNoise(input) {
+                return String(input || '')
+                    .replace(/^[\s;,]+/, '')
+                    .replace(/[\s;,]+$/, '');
+            }
+
+            function findFirstStructureIndex(input) {
+                const text = String(input || '');
+                const objectIndex = text.indexOf('{');
+                const arrayIndex = text.indexOf('[');
+                if (objectIndex < 0) return arrayIndex;
+                if (arrayIndex < 0) return objectIndex;
+                return Math.min(objectIndex, arrayIndex);
+            }
+
+            function extractPrimaryJSONChunk(input) {
+                const text = String(input || '').trim();
+                if (!text) return text;
+
+                const start = findFirstStructureIndex(text);
+                if (start < 0) return text;
+
+                const chunk = text.slice(start);
+                const stack = [];
+                let inString = false;
+                let escaped = false;
+
+                for (let i = 0; i < chunk.length; i++) {
+                    const ch = chunk[i];
+
+                    if (inString) {
+                        if (escaped) {
+                            escaped = false;
+                        } else if (ch === '\\') {
+                            escaped = true;
+                        } else if (ch === '"') {
+                            inString = false;
+                        }
+                        continue;
+                    }
+
+                    if (ch === '"') {
+                        inString = true;
+                        continue;
+                    }
+
+                    if (ch === '{' || ch === '[') {
+                        stack.push(ch);
+                        continue;
+                    }
+
+                    if (ch === '}' || ch === ']') {
+                        if (stack.length === 0) {
+                            continue;
+                        }
+                        const open = stack[stack.length - 1];
+                        const expected = open === '{' ? '}' : ']';
+                        if (ch === expected) {
+                            stack.pop();
+                            if (stack.length === 0) {
+                                return chunk.slice(0, i + 1).trim();
+                            }
+                        }
+                    }
+                }
+
+                return chunk.trim();
+            }
+
+            function stripTrailingCommas(input) {
+                return String(input || '')
+                    .replace(/,(\s*[}\]])/g, '$1')
+                    .replace(/,\s*,+/g, ',');
+            }
+
+            function quoteBareKeys(input) {
+                return String(input || '').replace(/([\{,]\s*|^\s*)([A-Za-z_][A-Za-z0-9_\-]*)(\s*:)/gm, '$1"$2"$3');
+            }
+
+            function singleToDoubleStrings(input) {
+                return String(input || '').replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, function (_, content) {
+                    const escaped = content.replace(/"/g, '\\"');
+                    return '"' + escaped + '"';
+                });
+            }
+
+            function removeDanglingValueNoise(input) {
+                return String(input || '').replace(
+                    /((?:"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?|true|false|null|\}|\]))\s*[A-Za-z_][A-Za-z0-9_\-]*\s*(?=(,|\}|\]|\n|$))/g,
+                    '$1'
+                );
+            }
+
+            function insertMissingCommas(input) {
+                let output = String(input || '');
+                const stringValueToKey = /("(?:[^"\\]|\\.)*")(\s*)(?="(?:[^"\\]|\\.)*"\s*:)/g;
+                const tokenToKey = /(\}|\]|-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?|true|false|null)(\s*)(?="(?:[^"\\]|\\.)*"\s*:)/g;
+
+                for (let round = 0; round < 4; round++) {
+                    const before = output;
+                    output = output.replace(stringValueToKey, '$1,$2');
+                    output = output.replace(tokenToKey, '$1,$2');
+                    if (output === before) break;
+                }
+
+                return output;
+            }
+
+            function wrapSimpleObject(input) {
+                const trimmed = String(input || '').trim();
+                if (!trimmed) return trimmed;
+
+                if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                    return trimmed;
+                }
+
+                const looksLikeObjectPair =
+                    /^"(?:[^"\\]|\\.)*"\s*:/.test(trimmed) ||
+                    /^'(?:[^'\\]|\\.)*'\s*:/.test(trimmed) ||
+                    /^[A-Za-z_][A-Za-z0-9_\-]*\s*:/.test(trimmed);
+
+                if (!looksLikeObjectPair && !trimmed.includes(':')) {
+                    return trimmed;
+                }
+
+                if (trimmed.endsWith('}')) {
+                    return '{' + trimmed;
+                }
+
+                return '{' + trimmed + '}';
+            }
+
+            function balanceBrackets(input) {
+                const text = String(input || '');
+                let output = '';
+                const stack = [];
+                let inString = false;
+                let escaped = false;
+
+                for (let i = 0; i < text.length; i++) {
+                    const ch = text[i];
+
+                    if (inString) {
+                        output += ch;
+                        if (escaped) {
+                            escaped = false;
+                        } else if (ch === '\\') {
+                            escaped = true;
+                        } else if (ch === '"') {
+                            inString = false;
+                        }
+                        continue;
+                    }
+
+                    if (ch === '"') {
+                        inString = true;
+                        output += ch;
+                        continue;
+                    }
+
+                    if (ch === '{' || ch === '[') {
+                        stack.push(ch);
+                        output += ch;
+                        continue;
+                    }
+
+                    if (ch === '}' || ch === ']') {
+                        if (stack.length === 0) {
+                            continue;
+                        }
+
+                        const open = stack[stack.length - 1];
+                        const expected = open === '{' ? '}' : ']';
+
+                        if (ch === expected) {
+                            stack.pop();
+                            output += ch;
+                        } else {
+                            output += expected;
+                            stack.pop();
+                            i -= 1;
+                        }
+                        continue;
+                    }
+
+                    output += ch;
+                }
+
+                while (stack.length > 0) {
+                    const open = stack.pop();
+                    output += open === '{' ? '}' : ']';
+                }
+
+                return output;
+            }
+
+            function toPrettyJSON(value) {
+                try {
+                    return JSON.stringify(value, null, 2);
+                } catch (_) {
+                    return '';
+                }
+            }
+
+            function normalizeExample(example) {
+                if (example === undefined || example === null) return '';
+                if (typeof example === 'string') {
+                    const trimmed = example.trim();
+                    if (!trimmed) return '';
+                    try {
+                        return JSON.stringify(JSON.parse(trimmed), null, 2);
+                    } catch (_) {
+                        return trimmed;
+                    }
+                }
+                return toPrettyJSON(example);
+            }
+
+            function runRepairPipeline(input) {
+                let output = String(input || '');
+                output = stripCodeFence(output);
+                output = normalizeQuotes(output);
+                output = stripComments(output);
+                output = stripEdgeNoise(output);
+                output = extractPrimaryJSONChunk(output);
+                output = wrapSimpleObject(output);
+
+                const transforms = [
+                    normalizeQuotes,
+                    quoteBareKeys,
+                    singleToDoubleStrings,
+                    removeDanglingValueNoise,
+                    insertMissingCommas,
+                    stripTrailingCommas,
+                    balanceBrackets,
+                    removeDanglingValueNoise,
+                    stripTrailingCommas,
+                    extractPrimaryJSONChunk
+                ];
+
+                for (let round = 0; round < 5; round++) {
+                    const beforeRound = output;
+                    for (let i = 0; i < transforms.length; i++) {
+                        output = transforms[i](output);
+                    }
+                    if (output === beforeRound) break;
+                }
+
+                output = wrapSimpleObject(output);
+                output = balanceBrackets(output);
+                output = stripTrailingCommas(output);
+                output = extractPrimaryJSONChunk(output);
+
+                return String(output || '').trim();
+            }
+
+            function autocorrectText(raw, cfg, overrides, field) {
+                const start = String(raw || '').trim();
+                if (!start) {
+                    return {
+                        ok: false,
+                        message: buildValidationMessage('empty', cfg, overrides),
+                        field: field
+                    };
+                }
+
+                const attempts = [];
+                function pushAttempt(candidate) {
+                    const text = String(candidate || '').trim();
+                    if (!text) return;
+                    if (!attempts.includes(text)) attempts.push(text);
+                }
+
+                pushAttempt(start);
+                pushAttempt(normalizeQuotes(start));
+                pushAttempt(stripCodeFence(start));
+
+                const cleaned = stripEdgeNoise(stripComments(stripCodeFence(normalizeQuotes(start))));
+                pushAttempt(cleaned);
+
+                const extracted = extractPrimaryJSONChunk(cleaned);
+                pushAttempt(extracted);
+                pushAttempt(wrapSimpleObject(extracted));
+
+                const repaired = runRepairPipeline(start);
+                pushAttempt(repaired);
+
+                const repairedFromExtracted = runRepairPipeline(extracted);
+                pushAttempt(repairedFromExtracted);
+
+                for (let i = 0; i < attempts.length; i++) {
+                    const candidate = attempts[i];
+                    const validated = validateText(candidate, cfg, overrides, field);
+                    if (!validated.ok) continue;
+                    return {
+                        ok: true,
+                        parsed: validated.parsed,
+                        text: toPrettyJSON(validated.parsed),
+                        field: field
+                    };
+                }
+
+                return {
+                    ok: false,
+                    message: 'No se pudo corregir automaticamente el JSON. Aun hay errores estructurales.',
+                    field: field
+                };
+            }
+
+            function setStatus(instance, kind, text) {
+                if (!instance || !instance.status) return;
+                const status = instance.status;
+                status.classList.remove('status-idle', 'status-success', 'status-warn', 'status-error');
+                status.classList.add(kind || 'status-idle');
+                status.textContent = text || '';
+            }
+
+            function bindModeWatcher(field, cfg, instance) {
+                if (!cfg.modeField) return;
+                const scope = field.form || field.closest('form') || document;
+                const selector = '[name="' + escapeAttrValue(cfg.modeField) + '"]';
+                const modeControl = scope.querySelector(selector);
+                if (!modeControl) return;
+
+                function refreshModeState() {
+                    const active = isModeActive(field, cfg);
+                    instance.modeActive = active;
+                    [instance.validateButton, instance.fixButton, instance.exampleButton].forEach(function(button) {
+                        if (button) {
+                            button.disabled = !active;
+                        }
+                    });
+
+                    if (active) {
+                        setStatus(instance, 'status-idle', '');
+                    } else {
+                        setStatus(
+                            instance,
+                            'status-warn',
+                            'Utilidades JSON inactivas: ' + cfg.modeField + ' debe ser "' + (cfg.modeValue || 'json') + '".'
+                        );
+                    }
+                }
+
+                modeControl.addEventListener('change', refreshModeState);
+                refreshModeState();
+            }
+
+            function initField(field) {
+                if (!(field instanceof HTMLTextAreaElement)) return;
+                if (field.dataset.jsonEditorReady === '1') return;
+
+                const cfg = mergeConfig(field);
+                const isReadOnly = !!cfg.readOnly;
+                const showActionButtons = !isReadOnly && cfg.showActionButtons !== false;
+                const wrapper = document.createElement('div');
+                wrapper.className = 'json-editor-shell';
+                if (isReadOnly) {
+                    wrapper.setAttribute('data-json-readonly', 'true');
+                }
+
+                const toolbar = document.createElement('div');
+                toolbar.className = 'json-editor-toolbar';
+
+                const meta = document.createElement('div');
+                meta.className = 'json-editor-meta';
+                meta.innerHTML = '<span class="json-editor-badge">JSON</span><span>' + cfg.title + '</span>';
+
+                if (isReadOnly) {
+                    const readOnlyBadge = document.createElement('span');
+                    readOnlyBadge.className = 'json-editor-badge json-editor-badge-readonly';
+                    readOnlyBadge.textContent = 'Solo lectura';
+                    meta.appendChild(readOnlyBadge);
+                }
+
+                const actions = document.createElement('div');
+                actions.className = 'flex items-center gap-2';
+
+                let validateButton = null;
+                let fixButton = null;
+                let exampleButton = null;
+                if (showActionButtons) {
+                    validateButton = document.createElement('button');
+                    validateButton.type = 'button';
+                    validateButton.textContent = 'Validar';
+
+                    fixButton = document.createElement('button');
+                    fixButton.type = 'button';
+                    fixButton.textContent = 'Corregir';
+
+                    exampleButton = document.createElement('button');
+                    exampleButton.type = 'button';
+                    exampleButton.textContent = 'Ejemplo';
+
+                    actions.appendChild(validateButton);
+                    actions.appendChild(fixButton);
+                    actions.appendChild(exampleButton);
+                }
+
+                let copyButton = null;
+                if (cfg.showCopyButton !== false) {
+                    copyButton = document.createElement('button');
+                    copyButton.type = 'button';
+                    copyButton.textContent = 'Copiar';
+                    actions.appendChild(copyButton);
+                }
+
+                let expandButton = null;
+                if (cfg.showExpandButton !== false) {
+                    expandButton = document.createElement('button');
+                    expandButton.type = 'button';
+                    expandButton.textContent = 'Expandir';
+                    actions.appendChild(expandButton);
+                }
+
+                toolbar.appendChild(meta);
+                toolbar.appendChild(actions);
+
+                const status = document.createElement('p');
+                status.className = 'json-editor-status status-idle';
+
+                const host = document.createElement('div');
+                host.className = 'json-editor-host';
+                const rows = Number(field.getAttribute('rows') || '4');
+                const baseHeight = Math.max(120, rows * 24 + 24);
+                const expandedHeight = Math.max(baseHeight + 240, 420);
+                host.style.height = baseHeight + 'px';
+
+                const parent = field.parentNode;
+                if (!parent) return;
+
+                parent.insertBefore(wrapper, field);
+                wrapper.appendChild(toolbar);
+
+                let editor = null;
+                const aceAvailable = !!(window.ace && typeof window.ace.edit === 'function');
+
+                if (aceAvailable) {
+                    wrapper.appendChild(host);
+                    editor = window.ace.edit(host);
+                    editor.session.setMode(resolveAceMode(field.value || '', cfg));
+                    editor.setTheme('ace/theme/one_dark');
+                    editor.setShowPrintMargin(false);
+                    editor.setOption('fontSize', '13px');
+                    editor.session.setTabSize(2);
+                    editor.session.setUseSoftTabs(true);
+                    editor.session.setUseWrapMode(true);
+                    editor.setOption('scrollPastEnd', 0.2);
+                    editor.setValue(field.value || '', -1);
+
+                    if (isReadOnly) {
+                        editor.setReadOnly(true);
+                        editor.setHighlightActiveLine(false);
+                        editor.setHighlightGutterLine(false);
+                    }
+
+                    if (!isReadOnly) {
+                        editor.session.on('change', function () {
+                            field.value = editor.getValue();
+                            field.dispatchEvent(new Event('input', { bubbles: true }));
+                        });
+                    }
+
+                    field.classList.add('hidden');
+                } else {
+                    field.classList.add('json-editor-fallback');
+                    field.style.height = baseHeight + 'px';
+                    field.style.minHeight = baseHeight + 'px';
+                    field.readOnly = isReadOnly;
+                }
+
+                if (isReadOnly) {
+                    field.readOnly = true;
+                }
+
+                wrapper.appendChild(field);
+                wrapper.appendChild(status);
+
+                let expanded = false;
+
+                function setEditorHeight(nextHeight) {
+                    const height = Math.max(120, Number(nextHeight) || baseHeight);
+                    if (editor) {
+                        host.style.height = height + 'px';
+                        setTimeout(function() {
+                            editor.resize();
+                        }, 0);
+                    } else {
+                        field.style.height = height + 'px';
+                        field.style.minHeight = height + 'px';
+                    }
+                }
+
+                const instance = {
+                    field: field,
+                    cfg: cfg,
+                    wrapper: wrapper,
+                    editor: editor,
+                    status: status,
+                    validateButton: validateButton,
+                    fixButton: fixButton,
+                    exampleButton: exampleButton,
+                    copyButton: copyButton,
+                    expandButton: expandButton,
+                    baseHeight: baseHeight,
+                    expandedHeight: expandedHeight,
+                    modeActive: true
+                };
+                instances.set(field, instance);
+
+                function currentValidation(overrides) {
+                    const merged = mergeConfig(field, overrides || {});
+                    if (!isModeActive(field, merged)) {
+                        return { ok: true, inactive: true, field: field };
+                    }
+                    return validateText(getEditorValue(field), merged, overrides || {}, field);
+                }
+
+                if (validateButton) {
+                    validateButton.addEventListener('click', async function () {
+                        const result = currentValidation();
+                        if (result.inactive) {
+                            setStatus(instance, 'status-warn', 'Modo JSON inactivo para este campo.');
+                            return;
+                        }
+                        if (!result.ok) {
+                            setStatus(instance, 'status-error', result.message || 'JSON invalido.');
+                            if (window.appAlert) {
+                                await window.appAlert(result.message || 'JSON invalido.', 'Validacion');
+                            }
+                            focusEditor(field);
+                            return;
+                        }
+                        setStatus(instance, 'status-success', 'JSON valido.');
+                    });
+                }
+
+                if (fixButton) {
+                    fixButton.addEventListener('click', async function () {
+                        if (!isModeActive(field, cfg)) {
+                            setStatus(instance, 'status-warn', 'Modo JSON inactivo para este campo.');
+                            return;
+                        }
+                        const fixed = autocorrectText(getEditorValue(field), cfg, {}, field);
+                        if (!fixed.ok) {
+                            setStatus(instance, 'status-error', fixed.message || 'No se pudo corregir el JSON.');
+                            if (window.appAlert) {
+                                await window.appAlert(fixed.message || 'No se pudo corregir el JSON.', 'Corregir JSON');
+                            }
+                            focusEditor(field);
+                            return;
+                        }
+                        setEditorValue(field, fixed.text || '');
+                        setStatus(instance, 'status-success', 'JSON corregido y formateado.');
+                    });
+                }
+
+                if (exampleButton) {
+                    exampleButton.addEventListener('click', async function () {
+                        if (!isModeActive(field, cfg)) {
+                            setStatus(instance, 'status-warn', 'Modo JSON inactivo para este campo.');
+                            return;
+                        }
+
+                        const example = normalizeExample(cfg.example);
+                        if (!example) {
+                            setStatus(instance, 'status-warn', 'No hay ejemplo configurado para este campo.');
+                            return;
+                        }
+
+                        const current = getEditorValue(field).trim();
+                        if (current) {
+                            const proceed = window.appConfirm
+                                ? await window.appConfirm('Este campo ya tiene contenido. ¿Deseas reemplazarlo por un ejemplo JSON?', 'Ejemplo JSON')
+                                : false;
+                            if (!proceed) {
+                                setStatus(instance, 'status-idle', 'Se mantuvo el contenido actual.');
+                                return;
+                            }
+                        }
+
+                        setEditorValue(field, example);
+                        setStatus(instance, 'status-success', 'Ejemplo JSON insertado.');
+                    });
+                }
+
+                if (copyButton) {
+                    copyButton.addEventListener('click', async function() {
+                        const payload = getEditorValue(field);
+                        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+                            if (window.appAlert) {
+                                await window.appAlert('El navegador no permite copiar automaticamente.', 'Copiar');
+                            }
+                            return;
+                        }
+
+                        try {
+                            await navigator.clipboard.writeText(payload);
+                            setStatus(instance, 'status-success', 'Contenido copiado al portapapeles.');
+                        } catch (_) {
+                            setStatus(instance, 'status-error', 'No se pudo copiar el contenido.');
+                            if (window.appAlert) {
+                                await window.appAlert('No se pudo copiar el contenido.', 'Copiar');
+                            }
+                        }
+                    });
+                }
+
+                if (expandButton) {
+                    expandButton.addEventListener('click', function() {
+                        expanded = !expanded;
+                        setEditorHeight(expanded ? expandedHeight : baseHeight);
+                        expandButton.textContent = expanded ? 'Contraer' : 'Expandir';
+                        setStatus(instance, 'status-idle', expanded ? 'Editor expandido.' : 'Editor contraido.');
+                    });
+                }
+
+                bindModeWatcher(field, cfg, instance);
+                field.dataset.jsonEditorReady = '1';
+            }
+
+            function init(root) {
+                const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+                const fields = Array.from(scope.querySelectorAll('textarea[data-json-editor]'));
+                fields.forEach(initField);
+            }
+
+            function validateField(field, overrides) {
+                if (!(field instanceof HTMLTextAreaElement)) return { ok: true };
+                const cfg = mergeConfig(field, overrides || {});
+                if (cfg.readOnly) {
+                    return { ok: true, readOnly: true, field: field };
+                }
+                if (!isModeActive(field, cfg)) {
+                    return { ok: true, inactive: true, field: field };
+                }
+                return validateText(getEditorValue(field), cfg, overrides || {}, field);
+            }
+
+            function autocorrectField(field, overrides) {
+                if (!(field instanceof HTMLTextAreaElement)) return { ok: false, message: 'Campo invalido.' };
+                const cfg = mergeConfig(field, overrides || {});
+                if (cfg.readOnly) {
+                    return { ok: false, message: 'Campo en modo solo lectura.', readOnly: true, field: field };
+                }
+                if (!isModeActive(field, cfg)) {
+                    return { ok: true, inactive: true, field: field };
+                }
+
+                const result = autocorrectText(getEditorValue(field), cfg, overrides || {}, field);
+                if (!result.ok) return result;
+                setEditorValue(field, result.text || '');
+                return result;
+            }
+
+            window.jsonEditorTools = {
+                init: init,
+                validateField: validateField,
+                autocorrectField: autocorrectField,
+                getValue: getEditorValue,
+                setValue: setEditorValue,
+                focusField: focusEditor
+            };
+
+            init(document);
         })();
 
         (function () {

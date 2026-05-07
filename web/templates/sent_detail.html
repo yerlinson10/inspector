@@ -30,13 +30,13 @@
             {{if .Headers}}
             <div class="mb-4">
                 <h4 class="text-sm text-gray-400 mb-1">Headers</h4>
-                <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto">{{.Headers}}</pre>
+                <textarea rows="7" data-json-editor data-json-readonly="true" data-json-show-actions="false" data-json-editor-mode="auto" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 font-mono">{{.Headers}}</textarea>
             </div>
             {{end}}
             {{if .Body}}
             <div>
                 <h4 class="text-sm text-gray-400 mb-1">Body</h4>
-                <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto max-h-64">{{.Body}}</pre>
+                <textarea rows="10" data-json-editor data-json-readonly="true" data-json-show-actions="false" data-json-editor-mode="auto" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 font-mono">{{.Body}}</textarea>
             </div>
             {{end}}
         </div>
@@ -52,13 +52,13 @@
             {{if .ResponseHeaders}}
             <div class="mb-4">
                 <h4 class="text-sm text-gray-400 mb-1">Headers</h4>
-                <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto max-h-48">{{.ResponseHeaders}}</pre>
+                <textarea rows="7" data-json-editor data-json-readonly="true" data-json-show-actions="false" data-json-editor-mode="auto" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 font-mono">{{.ResponseHeaders}}</textarea>
             </div>
             {{end}}
             {{if .ResponseBody}}
             <div>
                 <h4 class="text-sm text-gray-400 mb-1">Body</h4>
-                <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto max-h-96">{{.ResponseBody}}</pre>
+                <textarea rows="12" data-json-editor data-json-readonly="true" data-json-show-actions="false" data-json-editor-mode="auto" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 font-mono">{{.ResponseBody}}</textarea>
             </div>
             {{end}}
             {{end}}
