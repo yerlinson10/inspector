@@ -13,6 +13,7 @@ import (
 	"inspector/internal/storage"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type mockRuleInput struct {
@@ -38,10 +39,10 @@ type mockRuleInput struct {
 }
 
 type mockRuleView struct {
-	Rule                models.MockRule
-	EndpointName        string
-	EndpointSlug        string
-	ExcludedEndpointSet map[uint]bool
+	Rule                   models.MockRule
+	EndpointName           string
+	EndpointSlug           string
+	ExcludedEndpointSet    map[uint]bool
 	ExcludedEndpointTooltip string
 }
 
@@ -100,6 +101,9 @@ func MockRulesPage(c *gin.Context) {
 	}
 	if errMsg := strings.TrimSpace(c.Query("error")); errMsg != "" {
 		data["error"] = errMsg
+	}
+	if successMsg := strings.TrimSpace(c.Query("success")); successMsg != "" {
+		data["success"] = successMsg
 	}
 	c.HTML(http.StatusOK, "mocks.html", data)
 }
@@ -192,7 +196,7 @@ func CreateManagedMockRule(c *gin.Context) {
 			c.JSON(http.StatusCreated, gin.H{"status": "created", "id": rule.ID, "created_count": 1})
 			return
 		}
-		c.Redirect(http.StatusSeeOther, "/mocks")
+		c.Redirect(http.StatusSeeOther, "/mocks?success="+url.QueryEscape("Regla creada correctamente"))
 		return
 	}
 
@@ -233,7 +237,11 @@ func CreateManagedMockRule(c *gin.Context) {
 		c.JSON(http.StatusCreated, gin.H{"status": "created", "ids": createdIDs, "created_count": len(createdIDs)})
 		return
 	}
-	c.Redirect(http.StatusSeeOther, "/mocks")
+	msg := "Reglas creadas correctamente"
+	if len(createdIDs) == 1 {
+		msg = "Regla creada correctamente"
+	}
+	c.Redirect(http.StatusSeeOther, "/mocks?success="+url.QueryEscape(msg))
 }
 
 func UpdateMockRule(c *gin.Context) {
@@ -311,7 +319,7 @@ func UpdateManagedMockRule(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "updated", "id": rule.ID})
 		return
 	}
-	c.Redirect(http.StatusSeeOther, "/mocks")
+	c.Redirect(http.StatusSeeOther, "/mocks?success="+url.QueryEscape("Regla actualizada correctamente"))
 }
 
 func DeleteMockRule(c *gin.Context) {
@@ -358,14 +366,20 @@ func ToggleMockRule(c *gin.Context) {
 	}
 	mockID := strings.TrimSpace(c.Param("mockId"))
 
-	var rule models.MockRule
-	if err := storage.DB.Where("id = ? AND endpoint_id = ?", mockID, endpoint.ID).First(&rule).Error; err != nil {
+	result := storage.DB.Model(&models.MockRule{}).
+		Where("id = ? AND endpoint_id = ?", mockID, endpoint.ID).
+		UpdateColumn("is_active", gorm.Expr("NOT is_active"))
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to toggle mock rule"})
+		return
+	}
+	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "mock rule not found"})
 		return
 	}
 
-	rule.IsActive = !rule.IsActive
-	if err := storage.DB.Save(&rule).Error; err != nil {
+	var rule models.MockRule
+	if err := storage.DB.Where("id = ? AND endpoint_id = ?", mockID, endpoint.ID).First(&rule).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to toggle mock rule"})
 		return
 	}
@@ -381,14 +395,20 @@ func ToggleMockRule(c *gin.Context) {
 func ToggleManagedMockRule(c *gin.Context) {
 	mockID := strings.TrimSpace(c.Param("mockId"))
 
-	var rule models.MockRule
-	if err := storage.DB.First(&rule, mockID).Error; err != nil {
+	result := storage.DB.Model(&models.MockRule{}).
+		Where("id = ?", mockID).
+		UpdateColumn("is_active", gorm.Expr("NOT is_active"))
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to toggle mock rule"})
+		return
+	}
+	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "mock rule not found"})
 		return
 	}
 
-	rule.IsActive = !rule.IsActive
-	if err := storage.DB.Save(&rule).Error; err != nil {
+	var rule models.MockRule
+	if err := storage.DB.First(&rule, mockID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to toggle mock rule"})
 		return
 	}

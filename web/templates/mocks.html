@@ -4,8 +4,8 @@
     <p class="text-sm text-gray-400">Configura reglas globales para todos los endpoints o reglas especificas para endpoints concretos.</p>
 </div>
 
-{{if .error}}
-<div class="bg-red-900/40 border border-red-500 text-red-200 px-4 py-3 rounded mb-6">{{.error}}</div>
+{{if .success}}
+<div class="bg-emerald-900/40 border border-emerald-500 text-emerald-200 px-4 py-3 rounded mb-6">{{.success}}</div>
 {{end}}
 
 <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
@@ -28,10 +28,10 @@
             <div id="endpoint-select-wrap" class="md:col-span-2">
                 <label class="block text-sm text-gray-400 mb-1">Endpoints (multi-select)</label>
                 <div id="endpoint-multiselect" class="relative">
-                    <button type="button" id="endpoint-multiselect-trigger" class="w-full min-h-10 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-left text-sm text-gray-100 focus:border-emerald-400 focus:outline-none transition disabled:cursor-not-allowed disabled:opacity-60">
+                    <button type="button" id="endpoint-multiselect-trigger" class="w-full min-h-10 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-left text-sm text-gray-100 focus:border-emerald-400 focus:outline-none transition disabled:cursor-not-allowed disabled:opacity-60" aria-haspopup="listbox" aria-expanded="false" aria-controls="endpoint-multiselect-panel">
                         <span id="endpoint-multiselect-value">Selecciona uno o varios endpoints</span>
                     </button>
-                    <div id="endpoint-multiselect-panel" class="hidden absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-2xl">
+                    <div id="endpoint-multiselect-panel" class="hidden absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-2xl" role="listbox" aria-multiselectable="true">
                         <div class="p-2 border-b border-gray-800">
                             <input type="text" id="endpoint-search" placeholder="Buscar endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
                         </div>
@@ -59,10 +59,10 @@
         <div id="global-excluded-wrap" class="hidden">
             <label class="block text-sm text-gray-400 mb-1">Excluir endpoints (solo global)</label>
             <div id="global-excluded-multiselect" data-ms-root data-ms-name="excluded_endpoint_ids" class="relative">
-                <button type="button" data-ms-trigger class="w-full min-h-10 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-left text-sm text-gray-100 focus:border-emerald-400 focus:outline-none transition disabled:cursor-not-allowed disabled:opacity-60">
+                <button type="button" data-ms-trigger class="w-full min-h-10 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-left text-sm text-gray-100 focus:border-emerald-400 focus:outline-none transition disabled:cursor-not-allowed disabled:opacity-60" aria-haspopup="listbox" aria-expanded="false">
                     <span data-ms-value>Selecciona endpoints a excluir</span>
                 </button>
-                <div data-ms-panel class="hidden absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-2xl">
+                <div data-ms-panel class="hidden absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-2xl" role="listbox" aria-multiselectable="true">
                     <div class="p-2 border-b border-gray-800">
                         <input type="text" data-ms-search placeholder="Buscar endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
                     </div>
@@ -196,7 +196,7 @@
         </div>
 
         <div class="flex justify-end">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium transition inline-flex items-center gap-2">
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium transition inline-flex items-center gap-2">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 Crear regla
             </button>
@@ -534,11 +534,11 @@
     </section>
 </div>
 
-<div id="edit-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+<div id="edit-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
     <div class="w-full max-w-3xl rounded-xl border border-gray-700 bg-gray-900 shadow-2xl">
         <div class="flex items-center justify-between px-5 py-3 border-b border-gray-800">
-            <h4 class="text-sm font-semibold text-gray-100">Editar Mock Rule</h4>
-            <button type="button" onclick="closeEditModal()" class="text-gray-400 hover:text-gray-200">x</button>
+            <h4 id="edit-modal-title" class="text-sm font-semibold text-gray-100">Editar Mock Rule</h4>
+            <button type="button" onclick="closeEditModal()" class="text-gray-400 hover:text-gray-200" aria-label="Cerrar modal">&times;</button>
         </div>
         <div id="edit-modal-body" class="p-5 max-h-[80vh] overflow-y-auto"></div>
     </div>
@@ -570,15 +570,160 @@ async function toggleRule(mockId) {
     window.location.reload();
 }
 
+function isPlainObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function validateJSONField(field, opts) {
+    if (!field) return { ok: true };
+    const raw = (field.value || '').trim();
+    if (!raw) return { ok: true };
+
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    } catch (_) {
+        return { ok: false, message: opts.invalidJSONMessage || 'JSON invalido.', field: field };
+    }
+
+    if (opts.requireObject && !isPlainObject(parsed)) {
+        return { ok: false, message: opts.invalidObjectMessage || 'Debe ser un objeto JSON.', field: field };
+    }
+
+    if (opts.requireStringValues && isPlainObject(parsed)) {
+        const invalid = Object.values(parsed).some(function(v) { return typeof v !== 'string'; });
+        if (invalid) {
+            return { ok: false, message: opts.invalidStringValuesMessage || 'Todos los valores deben ser texto.', field: field };
+        }
+    }
+
+    return { ok: true };
+}
+
+function validateRegexField(field, message) {
+    if (!field) return { ok: true };
+    const raw = (field.value || '').trim();
+    if (!raw) return { ok: true };
+    try {
+        new RegExp(raw);
+    } catch (_) {
+        return { ok: false, message: message || 'Regex invalido.', field: field };
+    }
+    return { ok: true };
+}
+
+function validateMockForm(form) {
+    if (!(form instanceof HTMLFormElement)) return { ok: true };
+
+    const pathModeField = form.querySelector('[name="path_mode"]');
+    const pathValueField = form.querySelector('[name="path_value"]');
+    const queryModeField = form.querySelector('[name="query_mode"]');
+    const queryJSONField = form.querySelector('[name="query_json"]');
+    const headersModeField = form.querySelector('[name="headers_mode"]');
+    const headersJSONField = form.querySelector('[name="headers_json"]');
+    const bodyModeField = form.querySelector('[name="body_mode"]');
+    const bodyPatternField = form.querySelector('[name="body_pattern"]');
+    const responseHeadersField = form.querySelector('[name="response_headers"]');
+    const responseBodyField = form.querySelector('[name="response_body"]');
+
+    const pathMode = pathModeField ? String(pathModeField.value || '').trim().toLowerCase() : 'any';
+    const queryMode = queryModeField ? String(queryModeField.value || '').trim().toLowerCase() : 'any';
+    const headersMode = headersModeField ? String(headersModeField.value || '').trim().toLowerCase() : 'any';
+    const bodyMode = bodyModeField ? String(bodyModeField.value || '').trim().toLowerCase() : 'any';
+
+    if (pathMode === 'regex') {
+        const regexCheck = validateRegexField(pathValueField, 'path_value debe ser un regex valido cuando path_mode=regex');
+        if (!regexCheck.ok) return regexCheck;
+    }
+
+    if (queryMode !== 'any') {
+        const queryCheck = validateJSONField(queryJSONField, {
+            invalidJSONMessage: 'query_json debe ser un JSON valido de tipo objeto.',
+            invalidObjectMessage: 'query_json debe ser un objeto JSON.',
+            invalidStringValuesMessage: 'query_json debe contener solo valores de texto.',
+            requireObject: true,
+            requireStringValues: true
+        });
+        if (!queryCheck.ok) return queryCheck;
+    }
+
+    if (headersMode !== 'any') {
+        const headersCheck = validateJSONField(headersJSONField, {
+            invalidJSONMessage: 'headers_json debe ser un JSON valido de tipo objeto.',
+            invalidObjectMessage: 'headers_json debe ser un objeto JSON.',
+            invalidStringValuesMessage: 'headers_json debe contener solo valores de texto.',
+            requireObject: true,
+            requireStringValues: true
+        });
+        if (!headersCheck.ok) return headersCheck;
+    }
+
+    if (bodyMode === 'regex') {
+        const bodyRegexCheck = validateRegexField(bodyPatternField, 'body_pattern debe ser un regex valido cuando body_mode=regex');
+        if (!bodyRegexCheck.ok) return bodyRegexCheck;
+    }
+
+    if (bodyMode === 'json') {
+        const bodyJSONCheck = validateJSONField(bodyPatternField, {
+            invalidJSONMessage: 'body_pattern debe ser un JSON valido cuando body_mode=json',
+            invalidObjectMessage: 'body_pattern debe ser un objeto JSON cuando body_mode=json',
+            requireObject: true,
+            requireStringValues: false
+        });
+        if (!bodyJSONCheck.ok) return bodyJSONCheck;
+    }
+
+    const responseHeadersCheck = validateJSONField(responseHeadersField, {
+        invalidJSONMessage: 'response_headers debe ser un JSON valido.',
+        invalidObjectMessage: 'response_headers debe ser un objeto JSON.',
+        requireObject: true,
+        requireStringValues: false
+    });
+    if (!responseHeadersCheck.ok) return responseHeadersCheck;
+
+    const responseBodyCheck = validateJSONField(responseBodyField, {
+        invalidJSONMessage: 'response_body debe ser un JSON valido.',
+        requireObject: false,
+        requireStringValues: false
+    });
+    if (!responseBodyCheck.ok) return responseBodyCheck;
+
+    return { ok: true };
+}
+
+let editModalLastFocused = null;
+
 function openEditModal(templateId) {
     const tpl = document.getElementById(templateId);
     const modal = document.getElementById('edit-modal');
     const body = document.getElementById('edit-modal-body');
     if (!tpl || !modal || !body) return;
+
+    editModalLastFocused = document.activeElement;
     body.innerHTML = tpl.innerHTML;
     initCustomMultiSelects(body);
+
+    const editForm = body.querySelector('form');
+    if (editForm) {
+        editForm.addEventListener('submit', async function(event) {
+            const validation = validateMockForm(editForm);
+            if (validation.ok) return;
+
+            event.preventDefault();
+            await window.appAlert(validation.message || 'Formulario invalido.', 'Validacion');
+            if (validation.field && typeof validation.field.focus === 'function') {
+                validation.field.focus();
+            }
+        });
+    }
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+
+    const firstFocusable = body.querySelector('input:not([type="hidden"]), select, textarea, button');
+    if (firstFocusable && typeof firstFocusable.focus === 'function') {
+        firstFocusable.focus();
+    }
 }
 
 function closeEditModal() {
@@ -586,6 +731,11 @@ function closeEditModal() {
     if (!modal) return;
     modal.classList.add('hidden');
     modal.classList.remove('flex');
+
+    if (editModalLastFocused && typeof editModalLastFocused.focus === 'function') {
+        editModalLastFocused.focus();
+    }
+    editModalLastFocused = null;
 }
 
 function initCustomMultiSelect(root, options) {
@@ -599,9 +749,26 @@ function initCustomMultiSelect(root, options) {
     const items = Array.from(root.querySelectorAll('[data-ms-item]'));
     const selected = new Set();
     const inputName = root.getAttribute('data-ms-name') || (options && options.inputName) || 'values';
+    const panelId = panel ? (panel.id || ('ms-panel-' + Math.random().toString(36).slice(2, 10))) : '';
+
+    if (panel && panelId) {
+        panel.id = panelId;
+        panel.setAttribute('role', 'listbox');
+        panel.setAttribute('aria-multiselectable', 'true');
+    }
+    if (trigger && panelId) {
+        trigger.setAttribute('aria-haspopup', 'listbox');
+        trigger.setAttribute('aria-controls', panelId);
+        trigger.setAttribute('aria-expanded', 'false');
+    }
 
     function selectedValues() {
         return Array.from(selected);
+    }
+
+    function closePanel() {
+        if (panel) panel.classList.add('hidden');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
     }
 
     function renderHiddenInputs() {
@@ -638,7 +805,9 @@ function initCustomMultiSelect(root, options) {
         items.forEach(item => {
             const itemValue = item.getAttribute('data-ms-value-item') || '';
             const isSelected = selected.has(itemValue);
+            item.setAttribute('role', 'option');
             item.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+            item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
             item.classList.toggle('bg-gray-800', isSelected);
             item.classList.toggle('text-emerald-200', isSelected);
             item.classList.toggle('ring-1', isSelected);
@@ -674,6 +843,7 @@ function initCustomMultiSelect(root, options) {
         trigger.addEventListener('click', function() {
             if (trigger.disabled) return;
             panel.classList.toggle('hidden');
+            trigger.setAttribute('aria-expanded', panel.classList.contains('hidden') ? 'false' : 'true');
             if (!panel.classList.contains('hidden') && search) search.focus();
         });
     }
@@ -692,7 +862,16 @@ function initCustomMultiSelect(root, options) {
 
     document.addEventListener('click', function(ev) {
         if (!panel || panel.classList.contains('hidden')) return;
-        if (!root.contains(ev.target)) panel.classList.add('hidden');
+        if (!root.contains(ev.target)) closePanel();
+    });
+
+    root.addEventListener('keydown', function(ev) {
+        if (ev.key !== 'Escape') return;
+        if (!panel || panel.classList.contains('hidden')) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        closePanel();
+        if (trigger) trigger.focus();
     });
 
     syncAll();
@@ -700,13 +879,13 @@ function initCustomMultiSelect(root, options) {
     return {
         clear: clearSelection,
         close: function() {
-            if (panel) panel.classList.add('hidden');
+            closePanel();
         },
         setDisabled: function(disabled) {
             if (trigger) trigger.disabled = !!disabled;
             if (disabled) {
                 clearSelection();
-                if (panel) panel.classList.add('hidden');
+                closePanel();
             }
         },
         selectedValues: selectedValues,
@@ -723,8 +902,8 @@ function initCustomMultiSelects(scopeRoot) {
     const endpointWrap = document.getElementById('endpoint-select-wrap');
     const createForm = document.getElementById('mock-create-form');
     const globalExcludedWrap = document.getElementById('global-excluded-wrap');
-    const globalExcludedSelect = document.getElementById('global-excluded-select');
     const globalExcludedRoot = document.getElementById('global-excluded-multiselect');
+    const endpointRoot = document.getElementById('endpoint-multiselect');
     const endpointTrigger = document.getElementById('endpoint-multiselect-trigger');
     const endpointPanel = document.getElementById('endpoint-multiselect-panel');
     const endpointValue = document.getElementById('endpoint-multiselect-value');
@@ -737,6 +916,11 @@ function initCustomMultiSelects(scopeRoot) {
     const selectedEndpointSet = new Set();
     const globalExcludedMulti = globalExcludedRoot ? initCustomMultiSelect(globalExcludedRoot, { inputName: 'excluded_endpoint_ids', emptyLabel: 'Selecciona endpoints a excluir' }) : null;
 
+    endpointItems.forEach(function(item) {
+        item.setAttribute('role', 'option');
+        item.setAttribute('aria-selected', 'false');
+    });
+
     function selectedEndpointValues() {
         return Array.from(selectedEndpointSet);
     }
@@ -746,6 +930,7 @@ function initCustomMultiSelects(scopeRoot) {
             const value = item.getAttribute('data-endpoint-value') || '';
             const selected = selectedEndpointSet.has(value);
             item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            item.setAttribute('aria-selected', selected ? 'true' : 'false');
             item.classList.toggle('bg-gray-800', selected);
             item.classList.toggle('text-emerald-200', selected);
             item.classList.toggle('ring-1', selected);
@@ -799,6 +984,9 @@ function initCustomMultiSelects(scopeRoot) {
             return;
         }
         endpointPanel.classList.add('hidden');
+        if (endpointTrigger) {
+            endpointTrigger.setAttribute('aria-expanded', 'false');
+        }
     }
 
     function clearEndpointSelection() {
@@ -822,19 +1010,12 @@ function initCustomMultiSelects(scopeRoot) {
         if (globalExcludedWrap) {
             globalExcludedWrap.classList.toggle('hidden', !isGlobal);
         }
-        if (globalExcludedSelect) {
-            globalExcludedSelect.disabled = !isGlobal;
-        }
         if (globalExcludedMulti) {
             globalExcludedMulti.setDisabled(!isGlobal);
         }
         if (isGlobal) {
             clearEndpointSelection();
             closeEndpointPanel();
-        } else if (globalExcludedSelect) {
-            Array.from(globalExcludedSelect.options).forEach(opt => {
-                opt.selected = false;
-            });
         }
     }
 
@@ -844,6 +1025,7 @@ function initCustomMultiSelects(scopeRoot) {
                 return;
             }
             endpointPanel.classList.toggle('hidden');
+            endpointTrigger.setAttribute('aria-expanded', endpointPanel.classList.contains('hidden') ? 'false' : 'true');
             if (!endpointPanel.classList.contains('hidden') && endpointSearch) {
                 endpointSearch.focus();
             }
@@ -880,14 +1062,26 @@ function initCustomMultiSelects(scopeRoot) {
     }
 
     document.addEventListener('click', function(ev) {
-        const root = document.getElementById('endpoint-multiselect');
-        if (!root || !endpointPanel || endpointPanel.classList.contains('hidden')) {
+        if (!endpointRoot || !endpointPanel || endpointPanel.classList.contains('hidden')) {
             return;
         }
-        if (!root.contains(ev.target)) {
+        if (!endpointRoot.contains(ev.target)) {
             closeEndpointPanel();
         }
     });
+
+    if (endpointRoot) {
+        endpointRoot.addEventListener('keydown', function(ev) {
+            if (ev.key !== 'Escape') return;
+            if (!endpointPanel || endpointPanel.classList.contains('hidden')) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            closeEndpointPanel();
+            if (endpointTrigger) {
+                endpointTrigger.focus();
+            }
+        });
+    }
 
     if (scopeSelect) {
         scopeSelect.addEventListener('change', syncScopeUI);
@@ -898,6 +1092,16 @@ function initCustomMultiSelects(scopeRoot) {
 
     if (createForm) {
         createForm.addEventListener('submit', async function(event) {
+            const validation = validateMockForm(createForm);
+            if (!validation.ok) {
+                event.preventDefault();
+                await window.appAlert(validation.message || 'Formulario invalido.', 'Validacion');
+                if (validation.field && typeof validation.field.focus === 'function') {
+                    validation.field.focus();
+                }
+                return;
+            }
+
             if (scopeSelect && scopeSelect.value === 'endpoint') {
                 const hasSelection = selectedEndpointValues().length > 0;
                 if (!hasSelection) {
@@ -918,6 +1122,12 @@ function initCustomMultiSelects(scopeRoot) {
             if (ev.target === modal) {
                 closeEditModal();
             }
+        });
+
+        document.addEventListener('keydown', function(ev) {
+            if (ev.key !== 'Escape') return;
+            if (modal.classList.contains('hidden')) return;
+            closeEditModal();
         });
     }
 })();

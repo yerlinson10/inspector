@@ -69,21 +69,52 @@ function initLiveFeed() {
     });
 
     live.on('new_request', function(req) {
-        const typeClass = req.type === 'websocket' ? 'text-purple-400' : req.type === 'webhook' ? 'text-yellow-400' : 'text-blue-400';
-        const html = `
-            <div class="bg-gray-800 rounded p-3 border border-gray-700 text-sm fade-in">
-                <div class="flex justify-between">
-                    <span class="font-mono">
-                        <span class="${typeClass}">${req.type}</span>
-                        <span class="text-gray-300">${req.method}</span>
-                    </span>
-                    <a href="/requests/${req.id}" class="text-emerald-400 hover:underline">→</a>
-                </div>
-                <div class="text-gray-400 truncate">${req.endpoint_slug}</div>
-                <div class="text-gray-500 text-xs">${new Date(req.created_at).toLocaleTimeString()}</div>
-            </div>`;
         const feed = document.getElementById('live-feed');
-        feed.insertAdjacentHTML('afterbegin', html);
+        if (!feed) return;
+
+        const typeClass = req.type === 'websocket' ? 'text-purple-400' : req.type === 'webhook' ? 'text-yellow-400' : 'text-blue-400';
+        const card = document.createElement('div');
+        card.className = 'bg-gray-800 rounded p-3 border border-gray-700 text-sm fade-in';
+
+        const topRow = document.createElement('div');
+        topRow.className = 'flex justify-between';
+
+        const mono = document.createElement('span');
+        mono.className = 'font-mono';
+
+        const typeEl = document.createElement('span');
+        typeEl.className = typeClass;
+        typeEl.textContent = req && req.type ? String(req.type) : '';
+
+        const methodEl = document.createElement('span');
+        methodEl.className = 'text-gray-300';
+        methodEl.textContent = req && req.method ? String(req.method) : '';
+
+        const link = document.createElement('a');
+        link.className = 'text-emerald-400 hover:underline';
+        link.textContent = '→';
+        link.href = '/requests/' + encodeURIComponent(req && req.id !== undefined && req.id !== null ? String(req.id) : '');
+
+        mono.appendChild(typeEl);
+        mono.appendChild(document.createTextNode(' '));
+        mono.appendChild(methodEl);
+        topRow.appendChild(mono);
+        topRow.appendChild(link);
+
+        const endpointEl = document.createElement('div');
+        endpointEl.className = 'text-gray-400 truncate';
+        endpointEl.textContent = req && req.endpoint_slug ? String(req.endpoint_slug) : '';
+
+        const timeEl = document.createElement('div');
+        timeEl.className = 'text-gray-500 text-xs';
+        const created = req && req.created_at ? new Date(req.created_at) : null;
+        timeEl.textContent = created && !Number.isNaN(created.getTime()) ? created.toLocaleTimeString() : '--:--:--';
+
+        card.appendChild(topRow);
+        card.appendChild(endpointEl);
+        card.appendChild(timeEl);
+
+        feed.prepend(card);
         if (feed.children.length > 50) feed.lastElementChild.remove();
     });
 }

@@ -9,11 +9,11 @@ const (
 
 type MockRule struct {
 	ID                  uint      `gorm:"primaryKey" json:"id"`
-	EndpointID          *uint     `gorm:"index" json:"endpoint_id,omitempty"`
-	Scope               string    `gorm:"size:16;index;not null;default:endpoint" json:"scope"`
+	EndpointID          *uint     `gorm:"index;index:idx_mock_rules_active_scope_endpoint,priority:3" json:"endpoint_id,omitempty"`
+	Scope               string    `gorm:"size:16;index;index:idx_mock_rules_active_scope_endpoint,priority:2;not null;default:endpoint" json:"scope"`
 	Name                string    `gorm:"not null" json:"name"`
 	Priority            int       `gorm:"index;not null;default:100" json:"priority"`
-	IsActive            bool      `gorm:"index;not null;default:true" json:"is_active"`
+	IsActive            bool      `gorm:"index;index:idx_mock_rules_active_scope_endpoint,priority:1;not null;default:true" json:"is_active"`
 	Method              string    `gorm:"size:16" json:"method"`
 	PathMode            string    `gorm:"size:16;not null;default:any" json:"path_mode"`
 	PathValue           string    `gorm:"type:text" json:"path_value"`

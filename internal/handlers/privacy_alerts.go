@@ -231,6 +231,11 @@ func triggerSentRequestAlert(sent models.SentRequest) {
 	}
 
 	go func(target string, body map[string]interface{}) {
+		if err := ValidateHTTPOutboundURL(target); err != nil {
+			log.Printf("failed to deliver alert webhook: %v", err)
+			return
+		}
+
 		encoded, err := json.Marshal(body)
 		if err != nil {
 			return
@@ -242,7 +247,7 @@ func triggerSentRequestAlert(sent models.SentRequest) {
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		client := &http.Client{Timeout: 5 * time.Second}
+		client := newOutboundHTTPClient(5 * time.Second)
 		resp, err := client.Do(req)
 		if err != nil {
 			log.Printf("failed to deliver alert webhook: %v", err)

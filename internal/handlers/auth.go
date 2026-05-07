@@ -1,9 +1,13 @@
 package handlers
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"inspector/internal/middleware"
@@ -15,6 +19,17 @@ type AuthHandler struct {
 	Username       string
 	Password       string
 	SessionManager *middleware.SessionManager
+	attemptsMu     sync.Mutex
+	attempts       map[string]loginAttempt
+	maxAttempts    int
+	attemptWindow  time.Duration
+	blockDuration  time.Duration
+}
+
+type loginAttempt struct {
+	FailedCount int
+	WindowStart time.Time
+	BlockedUntil time.Time
 }
 
 func NewAuthHandler(username, password string, sessionTTL time.Duration) *AuthHandler {
@@ -22,6 +37,10 @@ func NewAuthHandler(username, password string, sessionTTL time.Duration) *AuthHa
 		Username:       username,
 		Password:       password,
 		SessionManager: middleware.NewSessionManager(sessionTTL),
+		attempts:       make(map[string]loginAttempt),
+		maxAttempts:    5,
+		attemptWindow:  10 * time.Minute,
+		blockDuration:  10 * time.Minute,
 	}
 }
 
@@ -37,8 +56,25 @@ func (h *AuthHandler) HandleLogin(c *gin.Context) {
 	username := strings.TrimSpace(c.PostForm("username"))
 	password := c.PostForm("password")
 	next := sanitizeNextPath(c.DefaultPostForm("next", "/dashboard"))
+	now := time.Now()
+	clientKey := strings.TrimSpace(c.ClientIP())
 
-	if username != h.Username || password != h.Password {
+	if retryAfter, blocked := h.isLoginBlocked(clientKey, now); blocked {
+		retrySeconds := int(retryAfter.Seconds())
+		if retrySeconds < 1 {
+			retrySeconds = 1
+		}
+		c.Header("Retry-After", strconv.Itoa(retrySeconds))
+		c.HTML(http.StatusTooManyRequests, "login.html", gin.H{
+			"title": "Login",
+			"next":  next,
+			"error": "Demasiados intentos fallidos. Intenta de nuevo en " + strconv.Itoa(retrySeconds) + "s",
+		})
+		return
+	}
+
+	if !constantTimeEquals(username, h.Username) || !constantTimeEquals(password, h.Password) {
+		h.recordFailedLogin(clientKey, now)
 		c.HTML(http.StatusUnauthorized, "login.html", gin.H{
 			"title": "Login",
 			"next":  next,
@@ -46,6 +82,7 @@ func (h *AuthHandler) HandleLogin(c *gin.Context) {
 		})
 		return
 	}
+	h.clearFailedLogin(clientKey)
 
 	if h.SessionManager == nil {
 		h.SessionManager = middleware.NewSessionManager(12 * time.Hour)
@@ -79,6 +116,80 @@ func (h *AuthHandler) ValidateSession(token string) bool {
 		return false
 	}
 	return h.SessionManager.ValidateSession(token)
+}
+
+func constantTimeEquals(a, b string) bool {
+	aHash := sha256.Sum256([]byte(a))
+	bHash := sha256.Sum256([]byte(b))
+	return subtle.ConstantTimeCompare(aHash[:], bHash[:]) == 1
+}
+
+func (h *AuthHandler) isLoginBlocked(key string, now time.Time) (time.Duration, bool) {
+	if h == nil || key == "" {
+		return 0, false
+	}
+	h.attemptsMu.Lock()
+	defer h.attemptsMu.Unlock()
+	h.pruneLoginAttemptsLocked(now)
+
+	attempt, ok := h.attempts[key]
+	if !ok {
+		return 0, false
+	}
+	if !attempt.BlockedUntil.IsZero() && now.Before(attempt.BlockedUntil) {
+		return attempt.BlockedUntil.Sub(now), true
+	}
+	if !attempt.BlockedUntil.IsZero() && !now.Before(attempt.BlockedUntil) {
+		delete(h.attempts, key)
+	}
+	return 0, false
+}
+
+func (h *AuthHandler) recordFailedLogin(key string, now time.Time) {
+	if h == nil || key == "" {
+		return
+	}
+	h.attemptsMu.Lock()
+	defer h.attemptsMu.Unlock()
+
+	attempt := h.attempts[key]
+	if attempt.WindowStart.IsZero() || now.Sub(attempt.WindowStart) > h.attemptWindow {
+		attempt = loginAttempt{WindowStart: now}
+	}
+	attempt.FailedCount++
+	if h.maxAttempts > 0 && attempt.FailedCount >= h.maxAttempts {
+		attempt.BlockedUntil = now.Add(h.blockDuration)
+		attempt.FailedCount = 0
+		attempt.WindowStart = now
+	}
+	h.attempts[key] = attempt
+	h.pruneLoginAttemptsLocked(now)
+}
+
+func (h *AuthHandler) clearFailedLogin(key string) {
+	if h == nil || key == "" {
+		return
+	}
+	h.attemptsMu.Lock()
+	delete(h.attempts, key)
+	h.attemptsMu.Unlock()
+}
+
+func (h *AuthHandler) pruneLoginAttemptsLocked(now time.Time) {
+	if h == nil {
+		return
+	}
+	for key, attempt := range h.attempts {
+		if !attempt.BlockedUntil.IsZero() {
+			if now.After(attempt.BlockedUntil.Add(h.attemptWindow)) {
+				delete(h.attempts, key)
+			}
+			continue
+		}
+		if !attempt.WindowStart.IsZero() && now.Sub(attempt.WindowStart) > h.attemptWindow {
+			delete(h.attempts, key)
+		}
+	}
 }
 
 func sanitizeNextPath(next string) string {

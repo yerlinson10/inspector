@@ -138,12 +138,7 @@ func SendHTTP(c *gin.Context) {
 		}
 	}
 
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
-		},
-	}
+	client := newOutboundHTTPClient(30 * time.Second)
 
 	start := time.Now()
 	resp, err := client.Do(httpReq)
@@ -363,17 +358,29 @@ func WSProxy(c *gin.Context) {
 		return
 	}
 	defer browserConn.Close()
+	if maxBodyBytes := maxRequestBodyBytes(); maxBodyBytes > 0 {
+		browserConn.SetReadLimit(maxBodyBytes)
+	}
 
 	// Connect to target
 	dialer := websocket.Dialer{
 		HandshakeTimeout: 10 * time.Second,
+		NetDialContext:   outboundDialContext,
+		TLSClientConfig:  &tls.Config{MinVersion: tls.VersionTLS12},
 	}
 	targetConn, _, err := dialer.Dial(targetURL, nil)
 	if err != nil {
-		browserConn.WriteMessage(websocket.TextMessage, []byte(`{"error":"Failed to connect to target: `+err.Error()+`"}`))
+		payload, marshalErr := json.Marshal(gin.H{"error": "Failed to connect to target: " + err.Error()})
+		if marshalErr != nil {
+			payload = []byte(`{"error":"Failed to connect to target"}`)
+		}
+		_ = browserConn.WriteMessage(websocket.TextMessage, payload)
 		return
 	}
 	defer targetConn.Close()
+	if maxBodyBytes := maxResponseBodyBytes(); maxBodyBytes > 0 {
+		targetConn.SetReadLimit(maxBodyBytes)
+	}
 
 	// Log connection
 	sentReq := models.SentRequest{

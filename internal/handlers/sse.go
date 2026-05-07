@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -92,18 +91,8 @@ func SSEStream(c *gin.Context) {
 	c.Header("Expires", "0")
 	c.Header("X-Accel-Buffering", "no")
 	c.Header("Content-Encoding", "identity")
-	origin := c.GetHeader("Origin")
-	if origin == "" {
-		origin = c.Request.Header.Get("Referer")
-		if origin != "" {
-			if refURL, err := url.Parse(origin); err == nil && refURL.Scheme != "" && refURL.Host != "" {
-				origin = refURL.Scheme + "://" + refURL.Host
-			} else {
-				origin = ""
-			}
-		}
-	}
-	if origin != "" {
+	origin := strings.TrimSpace(c.GetHeader("Origin"))
+	if origin != "" && isAllowedSSEOrigin(origin, c.Request) {
 		c.Header("Access-Control-Allow-Origin", origin)
 		c.Header("Access-Control-Allow-Credentials", "true")
 	}

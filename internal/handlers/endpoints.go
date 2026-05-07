@@ -181,15 +181,18 @@ func DeleteEndpoint(c *gin.Context) {
 		return
 	}
 
-	if err := storage.DB.Where("endpoint_id = ?", endpoint.ID).Delete(&models.RequestLog{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete endpoint logs"})
-		return
-	}
-	if err := storage.DB.Where("endpoint_id = ?", endpoint.ID).Delete(&models.MockRule{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete endpoint mock rules"})
-		return
-	}
-	if err := storage.DB.Delete(&endpoint).Error; err != nil {
+	if err := storage.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("endpoint_id = ?", endpoint.ID).Delete(&models.RequestLog{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("endpoint_id = ?", endpoint.ID).Delete(&models.MockRule{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&endpoint).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete endpoint"})
 		return
 	}

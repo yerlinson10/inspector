@@ -583,6 +583,7 @@
 
             navLinks.forEach(function (link) {
                 link.classList.remove('active');
+                link.removeAttribute('aria-current');
 
                 const rawNavPath = link.getAttribute('data-nav');
                 if (!rawNavPath) return;
@@ -604,6 +605,7 @@
 
             if (bestMatch) {
                 bestMatch.classList.add('active');
+                bestMatch.setAttribute('aria-current', 'page');
             }
 
             if (window.lucide && window.lucide.createIcons) {

@@ -27,6 +27,9 @@ func Init(dbPath string) error {
 	if err != nil {
 		return err
 	}
+	if err := configureSQLite(dbPath); err != nil {
+		return err
+	}
 
 	return DB.AutoMigrate(
 		&models.Endpoint{},
@@ -34,6 +37,41 @@ func Init(dbPath string) error {
 		&models.RequestLog{},
 		&models.SentRequest{},
 	)
+}
+
+func configureSQLite(dbPath string) error {
+	trimmed := strings.TrimSpace(dbPath)
+	if trimmed == "" {
+		return fmt.Errorf("database path is required")
+	}
+	if DB == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	if !strings.HasPrefix(trimmed, ":memory:") {
+		if err := DB.Exec("PRAGMA journal_mode = WAL;").Error; err != nil {
+			return err
+		}
+	}
+	if err := DB.Exec("PRAGMA busy_timeout = 5000;").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("PRAGMA synchronous = NORMAL;").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("PRAGMA foreign_keys = ON;").Error; err != nil {
+		return err
+	}
+
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return err
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetConnMaxLifetime(0)
+
+	return nil
 }
 
 func ensureDatabaseDir(dbPath string) error {
@@ -61,13 +99,18 @@ func Cleanup(maxRequests int) {
 	if DB == nil || maxRequests <= 0 {
 		return
 	}
+	cleanupTable(&models.RequestLog{}, "request_logs", maxRequests)
+	cleanupTable(&models.SentRequest{}, "sent_requests", maxRequests)
+}
+
+func cleanupTable(model interface{}, table string, maxRows int) {
 	var count int64
-	if err := DB.Model(&models.RequestLog{}).Count(&count).Error; err != nil {
+	if err := DB.Model(model).Count(&count).Error; err != nil {
 		return
 	}
-	if count > int64(maxRequests) {
-		excess := count - int64(maxRequests)
-		DB.Exec("DELETE FROM request_logs WHERE id IN (SELECT id FROM request_logs ORDER BY created_at ASC LIMIT ?)", excess)
+	if count > int64(maxRows) {
+		excess := count - int64(maxRows)
+		DB.Exec("DELETE FROM "+table+" WHERE id IN (SELECT id FROM "+table+" ORDER BY created_at ASC, id ASC LIMIT ?)", excess)
 	}
 }
 

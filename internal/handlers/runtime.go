@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -62,7 +64,14 @@ func ConfigureRuntime(cfg RuntimeConfig) {
 		runtimeRedactionFields = toLookupMap(cfg.RedactionFields)
 	}
 
-	runtimeAlertWebhookURL = strings.TrimSpace(cfg.AlertWebhookURL)
+	alertWebhookURL := strings.TrimSpace(cfg.AlertWebhookURL)
+	if alertWebhookURL != "" {
+		if err := ValidateHTTPOutboundURL(alertWebhookURL); err != nil {
+			log.Printf("warning: alert webhook disabled: %v", err)
+			alertWebhookURL = ""
+		}
+	}
+	runtimeAlertWebhookURL = alertWebhookURL
 	if cfg.AlertMinSentStatus >= 100 && cfg.AlertMinSentStatus <= 599 {
 		runtimeAlertMinSentStatus = cfg.AlertMinSentStatus
 	}
@@ -139,15 +148,29 @@ func isAllowedWebSocketOrigin(r *http.Request) bool {
 		// Non-browser websocket clients often omit Origin.
 		return true
 	}
+	return isAllowedRequestOrigin(origin, r.Host)
+}
 
+func isAllowedSSEOrigin(origin string, r *http.Request) bool {
+	origin = strings.TrimSpace(origin)
+	if origin == "" {
+		return false
+	}
+	if r == nil {
+		return false
+	}
+	return isAllowedRequestOrigin(origin, r.Host)
+}
+
+func isAllowedRequestOrigin(origin, requestHost string) bool {
 	originURL, err := url.Parse(origin)
 	if err != nil || originURL.Host == "" {
 		return false
 	}
 
-	originHost := strings.ToLower(originURL.Host)
+	originHost := strings.ToLower(strings.TrimSpace(originURL.Host))
 	originName := hostnameFromHostPort(originHost)
-	requestHost := strings.ToLower(strings.TrimSpace(r.Host))
+	requestHost = strings.ToLower(strings.TrimSpace(requestHost))
 	requestName := hostnameFromHostPort(requestHost)
 
 	if originHost == requestHost || (originName != "" && originName == requestName) {
@@ -165,6 +188,89 @@ func isAllowedWebSocketOrigin(r *http.Request) bool {
 		}
 	}
 	return false
+}
+
+func newOutboundHTTPClient(timeout time.Duration) *http.Client {
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+
+	transport := &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		DialContext:           outboundDialContext,
+		ForceAttemptHTTP2:     true,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 30 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		IdleConnTimeout:       90 * time.Second,
+		MaxIdleConns:          100,
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
+	}
+
+	return &http.Client{
+		Timeout: timeout,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			if err := ValidateHTTPOutboundURL(req.URL.String()); err != nil {
+				return fmt.Errorf("blocked redirect target: %w", err)
+			}
+			return nil
+		},
+	}
+}
+
+func outboundDialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, fmt.Errorf("invalid target address")
+	}
+	host = strings.Trim(strings.TrimSpace(host), "[]")
+	if host == "" {
+		return nil, fmt.Errorf("invalid target host")
+	}
+
+	dialer := &net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}
+
+	if ip := net.ParseIP(host); ip != nil {
+		if isPrivateOrLocalIP(ip) {
+			return nil, fmt.Errorf("target IP is blocked for security reasons")
+		}
+		return dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+	}
+
+	normalizedHost := strings.ToLower(host)
+	if isBlockedHostname(normalizedHost) {
+		return nil, fmt.Errorf("target host is blocked for security reasons")
+	}
+
+	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+	if err != nil || len(ips) == 0 {
+		return nil, fmt.Errorf("failed to resolve target host")
+	}
+	for _, ip := range ips {
+		if isPrivateOrLocalIP(ip) {
+			return nil, fmt.Errorf("target resolves to a blocked private/local address")
+		}
+	}
+
+	var dialErr error
+	for _, ip := range ips {
+		conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+		if err == nil {
+			return conn, nil
+		}
+		dialErr = err
+	}
+	if dialErr != nil {
+		return nil, dialErr
+	}
+
+	return nil, fmt.Errorf("failed to connect to target host")
 }
 
 func normalizeOriginEntry(raw string) (string, string) {
@@ -250,11 +356,12 @@ func validateOutboundURL(rawURL string, allowedSchemes map[string]bool) error {
 	defer cancel()
 
 	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
-	if err == nil {
-		for _, ip := range ips {
-			if isPrivateOrLocalIP(ip) {
-				return fmt.Errorf("target resolves to a blocked private/local address")
-			}
+	if err != nil || len(ips) == 0 {
+		return fmt.Errorf("failed to resolve target host")
+	}
+	for _, ip := range ips {
+		if isPrivateOrLocalIP(ip) {
+			return fmt.Errorf("target resolves to a blocked private/local address")
 		}
 	}
 
