@@ -60,5 +60,74 @@
             <li>Si usas HTTPS con certificados de desarrollo, verifica la configuracion TLS del destino.</li>
         </ul>
     </section>
+
+    <section class="rounded-xl border border-blue-800/50 bg-blue-950/20 p-5 space-y-4">
+        <h3 class="text-xl font-semibold flex items-center gap-2"><i data-lucide="zap" class="w-5 h-5 text-blue-300"></i><span>Mock Rules — respuestas condicionales por endpoint</span></h3>
+        <p class="text-slate-300 text-sm">
+            Las <strong class="text-blue-200">Mock Rules</strong> te permiten que un mismo endpoint responda de forma distinta
+            dependiendo del request recibido: metodo HTTP, path, query params, headers o body.
+            Es similar a Beeceptor o Mockoon. Cada endpoint puede tener varias reglas; gana la primera que coincide
+            (por prioridad ascendente). Si ninguna coincide, se usa la respuesta estatica del endpoint como fallback.
+        </p>
+
+        <div class="grid gap-4 md:grid-cols-2">
+            <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-2">
+                <h4 class="text-sm font-semibold text-blue-200 flex items-center gap-1"><i data-lucide="list-ordered" class="w-4 h-4"></i> Como crear una regla</h4>
+                <ol class="list-decimal list-inside space-y-1 text-slate-300 text-sm">
+                    <li>Ve a <strong>Endpoints</strong> y abre cualquier endpoint.</li>
+                    <li>Verás el panel <span class="text-blue-300 font-medium">Mock Rules</span> al final de la tarjeta.</li>
+                    <li>Completa el formulario "Nueva Mock Rule" y haz clic en <strong>Create Mock Rule</strong>.</li>
+                    <li>La regla aparece en la lista inmediatamente y está activa por defecto.</li>
+                    <li>Puedes editarla inline y guardar con <strong>Save Rule</strong>.</li>
+                </ol>
+            </div>
+
+            <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-2">
+                <h4 class="text-sm font-semibold text-blue-200 flex items-center gap-1"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i> Campos clave</h4>
+                <ul class="space-y-1 text-sm text-slate-300">
+                    <li><span class="text-white font-medium">Priority</span> — número menor = se evalúa primero. Usa 1, 10, 100…</li>
+                    <li><span class="text-white font-medium">Method</span> — GET, POST, ANY (o vacío para cualquiera).</li>
+                    <li><span class="text-white font-medium">Path mode</span> — any · exact · prefix · regex.</li>
+                    <li><span class="text-white font-medium">Body mode</span> — any · exact · contains · regex · json (subconjunto de campos).</li>
+                    <li><span class="text-white font-medium">Delay ms</span> — retraso antes de responder (útil para simular latencia).</li>
+                    <li><span class="text-white font-medium">Active</span> — toggle rápido sin borrar la regla.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-3">
+            <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 space-y-1">
+                <p class="text-xs text-blue-300 font-semibold">Ejemplo: 200 para GET, 404 para el resto</p>
+                <p class="text-xs text-slate-400">Regla 1 (priority 1):</p>
+                <pre class="text-xs text-slate-200 overflow-x-auto">Method: GET
+Path mode: any
+Response: 200 {"ok":true}</pre>
+                <p class="text-xs text-slate-400 mt-1">Fallback del endpoint:</p>
+                <pre class="text-xs text-slate-200 overflow-x-auto">Response: 404 {"error":"not found"}</pre>
+            </div>
+            <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 space-y-1">
+                <p class="text-xs text-blue-300 font-semibold">Ejemplo: respuesta según body JSON</p>
+                <pre class="text-xs text-slate-200 overflow-x-auto">Method: POST
+Body mode: json
+Body pattern:
+  {"type":"payment"}
+Response: 201
+  {"charged":true}</pre>
+            </div>
+            <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 space-y-1">
+                <p class="text-xs text-blue-300 font-semibold">Ejemplo: simular timeout</p>
+                <pre class="text-xs text-slate-200 overflow-x-auto">Method: ANY
+Path mode: any
+Delay ms: 5000
+Response: 503
+  {"error":"timeout"}</pre>
+            </div>
+        </div>
+
+        <div class="rounded-lg border border-amber-800/40 bg-amber-950/20 p-3 text-sm text-amber-200 flex gap-2">
+            <i data-lucide="triangle-alert" class="w-4 h-4 mt-0.5 shrink-0 text-amber-400"></i>
+            <span>El orden de evaluación es <strong>Priority ASC</strong>. Si dos reglas tienen la misma prioridad, gana la de menor ID (la más antigua). El fallback final es siempre la respuesta configurada en el endpoint.</span>
+        </div>
+    </section>
 </div>
 {{end}}
