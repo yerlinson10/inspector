@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,22 +16,108 @@ import (
 )
 
 type mockRuleInput struct {
-	Name            string
-	Priority        int
-	IsActive        bool
-	Method          string
-	PathMode        string
-	PathValue       string
-	QueryMode       string
-	QueryJSON       string
-	HeadersMode     string
-	HeadersJSON     string
-	BodyMode        string
-	BodyPattern     string
-	ResponseStatus  int
-	ResponseHeaders string
-	ResponseBody    string
-	DelayMs         int
+	Scope               string
+	EndpointID          *uint
+	Name                string
+	ExcludedEndpointIDs string
+	Priority            int
+	IsActive            bool
+	Method              string
+	PathMode            string
+	PathValue           string
+	QueryMode           string
+	QueryJSON           string
+	HeadersMode         string
+	HeadersJSON         string
+	BodyMode            string
+	BodyPattern         string
+	ResponseStatus      int
+	ResponseHeaders     string
+	ResponseBody        string
+	DelayMs             int
+}
+
+type mockRuleView struct {
+	Rule                models.MockRule
+	EndpointName        string
+	EndpointSlug        string
+	ExcludedEndpointSet map[uint]bool
+	ExcludedEndpointTooltip string
+}
+
+func MockRulesPage(c *gin.Context) {
+	var endpoints []models.Endpoint
+	storage.DB.Order("name ASC").Find(&endpoints)
+
+	var rules []models.MockRule
+	storage.DB.Order("priority ASC, id ASC").Find(&rules)
+
+	endpointByID := map[uint]models.Endpoint{}
+	for _, ep := range endpoints {
+		endpointByID[ep.ID] = ep
+	}
+
+	var globalRules []mockRuleView
+	var endpointRules []mockRuleView
+	for _, rule := range rules {
+		view := mockRuleView{Rule: rule}
+		view.ExcludedEndpointSet = parseExcludedEndpointSet(rule.ExcludedEndpointIDs)
+		if normalizeMockScope(rule.Scope) == models.MockScopeGlobal && len(view.ExcludedEndpointSet) > 0 {
+			names := make([]string, 0, len(view.ExcludedEndpointSet))
+			for id := range view.ExcludedEndpointSet {
+				if ep, ok := endpointByID[id]; ok {
+					names = append(names, ep.Name+" (/in/"+ep.Slug+")")
+					continue
+				}
+				names = append(names, "ID "+strconv.Itoa(int(id)))
+			}
+			view.ExcludedEndpointTooltip = strings.Join(names, "\n")
+		}
+		if rule.EndpointID != nil {
+			if ep, ok := endpointByID[*rule.EndpointID]; ok {
+				view.EndpointName = ep.Name
+				view.EndpointSlug = ep.Slug
+			}
+		}
+		if normalizeMockScope(rule.Scope) == models.MockScopeGlobal {
+			globalRules = append(globalRules, view)
+		} else {
+			endpointRules = append(endpointRules, view)
+		}
+	}
+
+	data := gin.H{
+		"ContentTemplate": "mocks_content",
+		"title":           "Mock Rules",
+		"endpoints":       endpoints,
+		"globalRules":     globalRules,
+		"endpointRules":   endpointRules,
+	}
+	if token, ok := c.Get("csrfToken"); ok {
+		if tokenStr, ok := token.(string); ok {
+			data["csrfToken"] = tokenStr
+		}
+	}
+	if errMsg := strings.TrimSpace(c.Query("error")); errMsg != "" {
+		data["error"] = errMsg
+	}
+	c.HTML(http.StatusOK, "mocks.html", data)
+}
+
+func parseExcludedEndpointSet(raw string) map[uint]bool {
+	set := map[uint]bool{}
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return set
+	}
+	var ids []uint
+	if err := json.Unmarshal([]byte(trimmed), &ids); err != nil {
+		return set
+	}
+	for _, id := range ids {
+		set[id] = true
+	}
+	return set
 }
 
 func ListMockRules(c *gin.Context) {
@@ -42,6 +129,12 @@ func ListMockRules(c *gin.Context) {
 	var rules []models.MockRule
 	storage.DB.Where("endpoint_id = ?", endpoint.ID).Order("priority ASC, id ASC").Find(&rules)
 	c.JSON(http.StatusOK, gin.H{"endpoint_id": endpoint.ID, "items": rules})
+}
+
+func ListGlobalMockRules(c *gin.Context) {
+	var rules []models.MockRule
+	storage.DB.Where("scope = ?", models.MockScopeGlobal).Order("priority ASC, id ASC").Find(&rules)
+	c.JSON(http.StatusOK, gin.H{"scope": models.MockScopeGlobal, "items": rules})
 }
 
 func CreateMockRule(c *gin.Context) {
@@ -56,37 +149,91 @@ func CreateMockRule(c *gin.Context) {
 		return
 	}
 
-	rule := models.MockRule{
-		EndpointID:      endpoint.ID,
-		Name:            input.Name,
-		Priority:        input.Priority,
-		IsActive:        input.IsActive,
-		Method:          input.Method,
-		PathMode:        input.PathMode,
-		PathValue:       input.PathValue,
-		QueryMode:       input.QueryMode,
-		QueryJSON:       input.QueryJSON,
-		HeadersMode:     input.HeadersMode,
-		HeadersJSON:     input.HeadersJSON,
-		BodyMode:        input.BodyMode,
-		BodyPattern:     input.BodyPattern,
-		ResponseStatus:  input.ResponseStatus,
-		ResponseHeaders: input.ResponseHeaders,
-		ResponseBody:    input.ResponseBody,
-		DelayMs:         input.DelayMs,
-	}
+	input.Scope = models.MockScopeEndpoint
+	input.EndpointID = &endpoint.ID
 
+	rule := buildRuleFromInput(input)
 	if err := storage.DB.Create(&rule).Error; err != nil {
 		renderMockInputError(c, "failed to create mock rule")
 		return
 	}
 
-	broadcastMockChange("created", endpoint, rule)
+	broadcastMockChange("created", &endpoint, rule)
 	if wantsJSON(c) {
 		c.JSON(http.StatusCreated, gin.H{"status": "created", "id": rule.ID})
 		return
 	}
 	c.Redirect(http.StatusSeeOther, "/endpoints")
+}
+
+func CreateManagedMockRule(c *gin.Context) {
+	input, err := parseMockRuleInput(c)
+	if err != nil {
+		renderMockInputErrorInMocksPage(c, err.Error())
+		return
+	}
+	scope := normalizeMockScope(input.Scope)
+
+	if scope == models.MockScopeGlobal {
+		input.Scope = models.MockScopeGlobal
+		input.EndpointID = nil
+		if err := validateScopeAssignment(input.Scope, input.EndpointID); err != nil {
+			renderMockInputErrorInMocksPage(c, err.Error())
+			return
+		}
+
+		rule := buildRuleFromInput(input)
+		if err := storage.DB.Create(&rule).Error; err != nil {
+			renderMockInputErrorInMocksPage(c, "failed to create mock rule")
+			return
+		}
+		broadcastMockChange("created", nil, rule)
+		if wantsJSON(c) {
+			c.JSON(http.StatusCreated, gin.H{"status": "created", "id": rule.ID, "created_count": 1})
+			return
+		}
+		c.Redirect(http.StatusSeeOther, "/mocks")
+		return
+	}
+
+	endpointIDs, err := parseManagedEndpointIDs(c)
+	if err != nil {
+		renderMockInputErrorInMocksPage(c, err.Error())
+		return
+	}
+	if len(endpointIDs) == 0 && input.EndpointID != nil {
+		endpointIDs = append(endpointIDs, *input.EndpointID)
+	}
+	if len(endpointIDs) == 0 {
+		renderMockInputErrorInMocksPage(c, "selecciona al menos un endpoint para reglas scope=endpoint")
+		return
+	}
+
+	createdIDs := make([]uint, 0, len(endpointIDs))
+	for _, endpointID := range endpointIDs {
+		id := endpointID
+		input.Scope = models.MockScopeEndpoint
+		input.EndpointID = &id
+		if err := validateScopeAssignment(input.Scope, input.EndpointID); err != nil {
+			renderMockInputErrorInMocksPage(c, err.Error())
+			return
+		}
+
+		rule := buildRuleFromInput(input)
+		if err := storage.DB.Create(&rule).Error; err != nil {
+			renderMockInputErrorInMocksPage(c, "failed to create mock rule")
+			return
+		}
+		createdIDs = append(createdIDs, rule.ID)
+		endpoint := findEndpointByPointer(rule.EndpointID)
+		broadcastMockChange("created", endpoint, rule)
+	}
+
+	if wantsJSON(c) {
+		c.JSON(http.StatusCreated, gin.H{"status": "created", "ids": createdIDs, "created_count": len(createdIDs)})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, "/mocks")
 }
 
 func UpdateMockRule(c *gin.Context) {
@@ -112,34 +259,59 @@ func UpdateMockRule(c *gin.Context) {
 		return
 	}
 
-	rule.Name = input.Name
-	rule.Priority = input.Priority
-	rule.IsActive = input.IsActive
-	rule.Method = input.Method
-	rule.PathMode = input.PathMode
-	rule.PathValue = input.PathValue
-	rule.QueryMode = input.QueryMode
-	rule.QueryJSON = input.QueryJSON
-	rule.HeadersMode = input.HeadersMode
-	rule.HeadersJSON = input.HeadersJSON
-	rule.BodyMode = input.BodyMode
-	rule.BodyPattern = input.BodyPattern
-	rule.ResponseStatus = input.ResponseStatus
-	rule.ResponseHeaders = input.ResponseHeaders
-	rule.ResponseBody = input.ResponseBody
-	rule.DelayMs = input.DelayMs
+	input.Scope = models.MockScopeEndpoint
+	input.EndpointID = &endpoint.ID
+	updateRuleFromInput(&rule, input)
 
 	if err := storage.DB.Save(&rule).Error; err != nil {
 		renderMockInputError(c, "failed to update mock rule")
 		return
 	}
 
-	broadcastMockChange("updated", endpoint, rule)
+	broadcastMockChange("updated", &endpoint, rule)
 	if wantsJSON(c) {
 		c.JSON(http.StatusOK, gin.H{"status": "updated", "id": rule.ID})
 		return
 	}
 	c.Redirect(http.StatusSeeOther, "/endpoints")
+}
+
+func UpdateManagedMockRule(c *gin.Context) {
+	mockID := strings.TrimSpace(c.Param("mockId"))
+
+	var rule models.MockRule
+	if err := storage.DB.First(&rule, mockID).Error; err != nil {
+		if wantsJSON(c) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "mock rule not found"})
+			return
+		}
+		renderMockInputErrorInMocksPage(c, "Mock rule not found")
+		return
+	}
+
+	input, err := parseMockRuleInput(c)
+	if err != nil {
+		renderMockInputErrorInMocksPage(c, err.Error())
+		return
+	}
+	if err := validateScopeAssignment(input.Scope, input.EndpointID); err != nil {
+		renderMockInputErrorInMocksPage(c, err.Error())
+		return
+	}
+
+	updateRuleFromInput(&rule, input)
+	if err := storage.DB.Save(&rule).Error; err != nil {
+		renderMockInputErrorInMocksPage(c, "failed to update mock rule")
+		return
+	}
+
+	endpoint := findEndpointByPointer(rule.EndpointID)
+	broadcastMockChange("updated", endpoint, rule)
+	if wantsJSON(c) {
+		c.JSON(http.StatusOK, gin.H{"status": "updated", "id": rule.ID})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, "/mocks")
 }
 
 func DeleteMockRule(c *gin.Context) {
@@ -158,6 +330,23 @@ func DeleteMockRule(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete mock rule"})
 		return
 	}
+	broadcastMockChange("deleted", &endpoint, rule)
+	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
+}
+
+func DeleteManagedMockRule(c *gin.Context) {
+	mockID := strings.TrimSpace(c.Param("mockId"))
+
+	var rule models.MockRule
+	if err := storage.DB.First(&rule, mockID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "mock rule not found"})
+		return
+	}
+	if err := storage.DB.Delete(&rule).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete mock rule"})
+		return
+	}
+	endpoint := findEndpointByPointer(rule.EndpointID)
 	broadcastMockChange("deleted", endpoint, rule)
 	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
 }
@@ -181,7 +370,7 @@ func ToggleMockRule(c *gin.Context) {
 		return
 	}
 
-	broadcastMockChange("toggled", endpoint, rule)
+	broadcastMockChange("toggled", &endpoint, rule)
 	if wantsJSON(c) {
 		c.JSON(http.StatusOK, gin.H{"status": "updated", "id": rule.ID, "is_active": rule.IsActive})
 		return
@@ -189,8 +378,33 @@ func ToggleMockRule(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/endpoints")
 }
 
+func ToggleManagedMockRule(c *gin.Context) {
+	mockID := strings.TrimSpace(c.Param("mockId"))
+
+	var rule models.MockRule
+	if err := storage.DB.First(&rule, mockID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "mock rule not found"})
+		return
+	}
+
+	rule.IsActive = !rule.IsActive
+	if err := storage.DB.Save(&rule).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to toggle mock rule"})
+		return
+	}
+
+	endpoint := findEndpointByPointer(rule.EndpointID)
+	broadcastMockChange("toggled", endpoint, rule)
+	if wantsJSON(c) {
+		c.JSON(http.StatusOK, gin.H{"status": "updated", "id": rule.ID, "is_active": rule.IsActive})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, "/mocks")
+}
+
 func parseMockRuleInput(c *gin.Context) (mockRuleInput, error) {
 	in := mockRuleInput{
+		Scope:           normalizeMockScope(c.PostForm("scope")),
 		Name:            strings.TrimSpace(c.PostForm("name")),
 		Method:          strings.TrimSpace(c.PostForm("method")),
 		PathMode:        strings.ToLower(strings.TrimSpace(c.PostForm("path_mode"))),
@@ -203,6 +417,27 @@ func parseMockRuleInput(c *gin.Context) (mockRuleInput, error) {
 		BodyPattern:     strings.TrimSpace(c.PostForm("body_pattern")),
 		ResponseHeaders: strings.TrimSpace(c.PostForm("response_headers")),
 		ResponseBody:    strings.TrimSpace(c.PostForm("response_body")),
+	}
+
+	excludedEndpointIDs, err := parseManagedExcludedEndpointIDs(c)
+	if err != nil {
+		return in, err
+	}
+	if len(excludedEndpointIDs) > 0 {
+		raw, marshalErr := json.Marshal(excludedEndpointIDs)
+		if marshalErr != nil {
+			return in, &parseError{msg: "excluded_endpoint_ids no se pudo procesar"}
+		}
+		in.ExcludedEndpointIDs = string(raw)
+	}
+
+	if endpointRaw := strings.TrimSpace(c.PostForm("endpoint_id")); endpointRaw != "" {
+		endpointVal, err := strconv.ParseUint(endpointRaw, 10, 64)
+		if err != nil {
+			return in, &parseError{msg: "endpoint_id must be a valid ID"}
+		}
+		endpointID := uint(endpointVal)
+		in.EndpointID = &endpointID
 	}
 
 	if in.Name == "" {
@@ -265,6 +500,9 @@ func parseMockRuleInput(c *gin.Context) (mockRuleInput, error) {
 	if err := validateMockRulePatterns(in); err != nil {
 		return in, err
 	}
+	if err := validateExcludedEndpoints(in.Scope, in.ExcludedEndpointIDs); err != nil {
+		return in, err
+	}
 	if err := validateEndpointResponseConfig(in.ResponseHeaders, in.ResponseBody); err != nil {
 		return in, err
 	}
@@ -279,6 +517,173 @@ func parseMockRuleInput(c *gin.Context) (mockRuleInput, error) {
 	return in, nil
 }
 
+func parseManagedEndpointIDs(c *gin.Context) ([]uint, error) {
+	values := c.PostFormArray("endpoint_ids")
+	if len(values) == 0 {
+		values = c.PostFormArray("endpoint_ids[]")
+	}
+	seen := map[uint]struct{}{}
+	ids := make([]uint, 0, len(values))
+	for _, raw := range values {
+		trimmed := strings.TrimSpace(raw)
+		if trimmed == "" {
+			continue
+		}
+		parsed, err := strconv.ParseUint(trimmed, 10, 64)
+		if err != nil {
+			return nil, &parseError{msg: "endpoint_ids contiene un ID inválido"}
+		}
+		id := uint(parsed)
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+func parseManagedExcludedEndpointIDs(c *gin.Context) ([]uint, error) {
+	values := c.PostFormArray("excluded_endpoint_ids")
+	if len(values) == 0 {
+		values = c.PostFormArray("excluded_endpoint_ids[]")
+	}
+	seen := map[uint]struct{}{}
+	ids := make([]uint, 0, len(values))
+	for _, raw := range values {
+		trimmed := strings.TrimSpace(raw)
+		if trimmed == "" {
+			continue
+		}
+		parsed, err := strconv.ParseUint(trimmed, 10, 64)
+		if err != nil {
+			return nil, &parseError{msg: "excluded_endpoint_ids contiene un ID inválido"}
+		}
+		id := uint(parsed)
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+func validateExcludedEndpoints(scope string, raw string) error {
+	trimmed := strings.TrimSpace(raw)
+	if normalizeMockScope(scope) != models.MockScopeGlobal {
+		if trimmed != "" && trimmed != "[]" {
+			return &parseError{msg: "excluded_endpoint_ids solo aplica para scope=global"}
+		}
+		return nil
+	}
+	if trimmed == "" {
+		return nil
+	}
+	var ids []uint
+	if err := json.Unmarshal([]byte(trimmed), &ids); err != nil {
+		return &parseError{msg: "excluded_endpoint_ids debe ser un arreglo JSON de IDs"}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	var count int64
+	if err := storage.DB.Model(&models.Endpoint{}).Where("id IN ?", ids).Count(&count).Error; err != nil {
+		return &parseError{msg: "no se pudieron validar los excluded_endpoint_ids"}
+	}
+	if count != int64(len(ids)) {
+		return &parseError{msg: "excluded_endpoint_ids contiene endpoints inexistentes"}
+	}
+	return nil
+}
+func validateScopeAssignment(scope string, endpointID *uint) error {
+	norm := normalizeMockScope(scope)
+	if norm == models.MockScopeGlobal {
+		return nil
+	}
+	if endpointID == nil || *endpointID == 0 {
+		return &parseError{msg: "endpoint_id is required when scope=endpoint"}
+	}
+	var endpoint models.Endpoint
+	if err := storage.DB.First(&endpoint, *endpointID).Error; err != nil {
+		return &parseError{msg: "endpoint_id does not exist"}
+	}
+	return nil
+}
+
+func normalizeMockScope(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case models.MockScopeGlobal:
+		return models.MockScopeGlobal
+	default:
+		return models.MockScopeEndpoint
+	}
+}
+
+func buildRuleFromInput(in mockRuleInput) models.MockRule {
+	return models.MockRule{
+		Scope:               normalizeMockScope(in.Scope),
+		EndpointID:          endpointPointerForScope(in.Scope, in.EndpointID),
+		ExcludedEndpointIDs: excludedEndpointIDsForScope(in.Scope, in.ExcludedEndpointIDs),
+		Name:                in.Name,
+		Priority:            in.Priority,
+		IsActive:            in.IsActive,
+		Method:              in.Method,
+		PathMode:            in.PathMode,
+		PathValue:           in.PathValue,
+		QueryMode:           in.QueryMode,
+		QueryJSON:           in.QueryJSON,
+		HeadersMode:         in.HeadersMode,
+		HeadersJSON:         in.HeadersJSON,
+		BodyMode:            in.BodyMode,
+		BodyPattern:         in.BodyPattern,
+		ResponseStatus:      in.ResponseStatus,
+		ResponseHeaders:     in.ResponseHeaders,
+		ResponseBody:        in.ResponseBody,
+		DelayMs:             in.DelayMs,
+	}
+}
+
+func updateRuleFromInput(rule *models.MockRule, in mockRuleInput) {
+	rule.Scope = normalizeMockScope(in.Scope)
+	rule.EndpointID = endpointPointerForScope(in.Scope, in.EndpointID)
+	rule.ExcludedEndpointIDs = excludedEndpointIDsForScope(in.Scope, in.ExcludedEndpointIDs)
+	rule.Name = in.Name
+	rule.Priority = in.Priority
+	rule.IsActive = in.IsActive
+	rule.Method = in.Method
+	rule.PathMode = in.PathMode
+	rule.PathValue = in.PathValue
+	rule.QueryMode = in.QueryMode
+	rule.QueryJSON = in.QueryJSON
+	rule.HeadersMode = in.HeadersMode
+	rule.HeadersJSON = in.HeadersJSON
+	rule.BodyMode = in.BodyMode
+	rule.BodyPattern = in.BodyPattern
+	rule.ResponseStatus = in.ResponseStatus
+	rule.ResponseHeaders = in.ResponseHeaders
+	rule.ResponseBody = in.ResponseBody
+	rule.DelayMs = in.DelayMs
+}
+
+func endpointPointerForScope(scope string, endpointID *uint) *uint {
+	if normalizeMockScope(scope) == models.MockScopeGlobal {
+		return nil
+	}
+	return endpointID
+}
+
+func excludedEndpointIDsForScope(scope string, raw string) string {
+	if normalizeMockScope(scope) != models.MockScopeGlobal {
+		return ""
+	}
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+	return trimmed
+}
 func validateMockRuleModes(pathMode, queryMode, headersMode, bodyMode string) error {
 	if !isOneOf(pathMode, "any", "exact", "prefix", "regex") {
 		return &parseError{msg: "path_mode must be any|exact|prefix|regex"}
@@ -350,6 +755,17 @@ func getEndpointByIDParam(c *gin.Context) (models.Endpoint, bool) {
 	return endpoint, true
 }
 
+func findEndpointByPointer(endpointID *uint) *models.Endpoint {
+	if endpointID == nil {
+		return nil
+	}
+	var endpoint models.Endpoint
+	if err := storage.DB.First(&endpoint, *endpointID).Error; err != nil {
+		return nil
+	}
+	return &endpoint
+}
+
 func renderMockInputError(c *gin.Context, msg string) {
 	if wantsJSON(c) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
@@ -360,14 +776,30 @@ func renderMockInputError(c *gin.Context, msg string) {
 	renderEndpointsPage(c, http.StatusBadRequest, endpoints, msg)
 }
 
-func broadcastMockChange(action string, endpoint models.Endpoint, rule models.MockRule) {
+func renderMockInputErrorInMocksPage(c *gin.Context, msg string) {
+	if wantsJSON(c) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, "/mocks?error="+url.QueryEscape(msg))
+}
+
+func broadcastMockChange(action string, endpoint *models.Endpoint, rule models.MockRule) {
+	var endpointID interface{}
+	var slug interface{}
+	if endpoint != nil {
+		endpointID = endpoint.ID
+		slug = endpoint.Slug
+	}
+
 	broadcaster.DefaultHub.Broadcast(broadcaster.Event{
 		Type: "mock_changed",
 		Data: map[string]interface{}{
 			"action":      action,
 			"id":          rule.ID,
-			"endpoint_id": endpoint.ID,
-			"slug":        endpoint.Slug,
+			"scope":       normalizeMockScope(rule.Scope),
+			"endpoint_id": endpointID,
+			"slug":        slug,
 			"is_active":   rule.IsActive,
 		},
 	})

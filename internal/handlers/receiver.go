@@ -89,7 +89,14 @@ func ReceiveRequest(c *gin.Context) {
 	})
 
 	var rules []models.MockRule
-	storage.DB.Where("endpoint_id = ? AND is_active = ?", endpoint.ID, true).Find(&rules)
+	storage.DB.Where(
+		"is_active = ? AND ((scope = ? AND endpoint_id = ?) OR scope = ? OR (scope = '' AND endpoint_id = ?))",
+		true,
+		models.MockScopeEndpoint,
+		endpoint.ID,
+		models.MockScopeGlobal,
+		endpoint.ID,
+	).Find(&rules)
 	resolved := resolveResponse(endpoint, rules, c.Request, body)
 
 	for k, v := range resolved.headers {

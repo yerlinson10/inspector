@@ -86,3 +86,67 @@ func TestResolveResponse_BodyRegexAndContains(t *testing.T) {
 		t.Fatalf("expected regex response body, got %s", resp.body)
 	}
 }
+
+func TestResolveResponse_EndpointScopeWinsTieOverGlobal(t *testing.T) {
+	endpoint := models.Endpoint{ResponseStatus: 200, ResponseBody: `{"from":"endpoint-default"}`}
+	rules := []models.MockRule{
+		{
+			ID:             30,
+			Scope:          models.MockScopeGlobal,
+			Priority:       100,
+			IsActive:       true,
+			Method:         "POST",
+			PathMode:       "exact",
+			PathValue:      "/in/demo",
+			ResponseStatus: 210,
+			ResponseBody:   `{"from":"global"}`,
+		},
+		{
+			ID:             31,
+			Scope:          models.MockScopeEndpoint,
+			Priority:       100,
+			IsActive:       true,
+			Method:         "POST",
+			PathMode:       "exact",
+			PathValue:      "/in/demo",
+			ResponseStatus: 211,
+			ResponseBody:   `{"from":"endpoint-scope"}`,
+		},
+	}
+
+	req := &http.Request{Method: http.MethodPost, URL: &url.URL{Path: "/in/demo"}, Header: make(http.Header)}
+	resp := resolveResponse(endpoint, rules, req, []byte(`{"event":"deploy"}`))
+	if resp.status != 211 {
+		t.Fatalf("expected endpoint-scope rule to win tie, got status %d", resp.status)
+	}
+	if resp.ruleID != 31 {
+		t.Fatalf("expected matched rule 31, got %d", resp.ruleID)
+	}
+}
+
+func TestResolveResponse_GlobalRuleExcludedForEndpoint(t *testing.T) {
+	endpoint := models.Endpoint{ID: 7, ResponseStatus: 200, ResponseBody: `{"from":"endpoint-default"}`}
+	rules := []models.MockRule{
+		{
+			ID:                  40,
+			Scope:               models.MockScopeGlobal,
+			Priority:            10,
+			IsActive:            true,
+			Method:              "POST",
+			PathMode:            "exact",
+			PathValue:           "/in/demo",
+			ExcludedEndpointIDs: `[7]`,
+			ResponseStatus:      299,
+			ResponseBody:        `{"from":"global"}`,
+		},
+	}
+
+	req := &http.Request{Method: http.MethodPost, URL: &url.URL{Path: "/in/demo"}, Header: make(http.Header)}
+	resp := resolveResponse(endpoint, rules, req, []byte(`{"event":"deploy"}`))
+	if resp.ruleID != 0 {
+		t.Fatalf("expected excluded global rule to be skipped, got rule %d", resp.ruleID)
+	}
+	if resp.status != 200 {
+		t.Fatalf("expected fallback endpoint status 200, got %d", resp.status)
+	}
+}

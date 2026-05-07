@@ -120,6 +120,13 @@ func main() {
 		auth.POST("/endpoints/:id/mocks/:mockId", handlers.UpdateMockRule) // HTML form fallback
 		auth.DELETE("/endpoints/:id/mocks/:mockId", handlers.DeleteMockRule)
 		auth.POST("/endpoints/:id/mocks/:mockId/toggle", handlers.ToggleMockRule)
+		auth.GET("/mocks", handlers.MockRulesPage)
+		auth.GET("/mocks/global", handlers.ListGlobalMockRules)
+		auth.POST("/mocks", handlers.CreateManagedMockRule)
+		auth.PUT("/mocks/:mockId", handlers.UpdateManagedMockRule)
+		auth.POST("/mocks/:mockId", handlers.UpdateManagedMockRule) // HTML form fallback
+		auth.DELETE("/mocks/:mockId", handlers.DeleteManagedMockRule)
+		auth.POST("/mocks/:mockId/toggle", handlers.ToggleManagedMockRule)
 
 		// Sender
 		auth.GET("/send", handlers.SenderPage)
@@ -213,6 +220,7 @@ func buildRenderer() multitemplate.Renderer {
 	pages := []string{
 		"dashboard.html",
 		"endpoints.html",
+		"mocks.html",
 		"requests.html",
 		"request_diff.html",
 		"request_detail.html",

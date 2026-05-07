@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"inspector/internal/models"
@@ -30,11 +31,17 @@ func resolveResponse(endpoint models.Endpoint, rules []models.MockRule, req *htt
 		}
 		sort.Slice(sorted, func(i, j int) bool {
 			if sorted[i].Priority == sorted[j].Priority {
-				return sorted[i].ID < sorted[j].ID
+				if scopeRank(sorted[i].Scope) == scopeRank(sorted[j].Scope) {
+					return sorted[i].ID < sorted[j].ID
+				}
+				return scopeRank(sorted[i].Scope) < scopeRank(sorted[j].Scope)
 			}
 			return sorted[i].Priority < sorted[j].Priority
 		})
 		for _, rule := range sorted {
+			if isGlobalRuleExcludedForEndpoint(rule, endpoint.ID) {
+				continue
+			}
 			if matchRule(rule, req, body) {
 				return buildResponse(
 					rule.ResponseStatus,
@@ -54,6 +61,54 @@ func resolveResponse(endpoint models.Endpoint, rules []models.MockRule, req *htt
 		0,
 		0,
 	)
+}
+
+func isGlobalRuleExcludedForEndpoint(rule models.MockRule, endpointID uint) bool {
+	if normalizeMockScope(rule.Scope) != models.MockScopeGlobal {
+		return false
+	}
+	raw := strings.TrimSpace(rule.ExcludedEndpointIDs)
+	if raw == "" {
+		return false
+	}
+
+	var ids []uint
+	if err := json.Unmarshal([]byte(raw), &ids); err == nil {
+		for _, id := range ids {
+			if id == endpointID {
+				return true
+			}
+		}
+		return false
+	}
+
+	parts := strings.Split(raw, ",")
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		parsed, err := strconv.ParseUint(trimmed, 10, 64)
+		if err != nil {
+			continue
+		}
+		if uint(parsed) == endpointID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func scopeRank(scope string) int {
+	switch strings.ToLower(strings.TrimSpace(scope)) {
+	case models.MockScopeEndpoint, "":
+		return 0
+	case models.MockScopeGlobal:
+		return 1
+	default:
+		return 2
+	}
 }
 
 func buildResponse(status int, rawHeaders, responseBody string, delayMs int, ruleID uint) resolvedResponse {

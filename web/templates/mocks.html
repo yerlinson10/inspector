@@ -1,0 +1,925 @@
+{{define "content"}}
+<div class="flex flex-col gap-2 mb-6">
+    <h2 class="text-2xl font-bold">Mock Rules</h2>
+    <p class="text-sm text-gray-400">Configura reglas globales para todos los endpoints o reglas especificas para endpoints concretos.</p>
+</div>
+
+{{if .error}}
+<div class="bg-red-900/40 border border-red-500 text-red-200 px-4 py-3 rounded mb-6">{{.error}}</div>
+{{end}}
+
+<div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h3 class="text-lg font-semibold">Nueva Regla</h3>
+        <span class="text-xs text-gray-500">Menor prioridad numerica = se evalua primero</span>
+    </div>
+
+    <form method="POST" action="/mocks" class="space-y-4" id="mock-create-form">
+        <input type="hidden" name="csrf_token" value="{{.csrfToken}}">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Alcance</label>
+                <select name="scope" id="scope-select" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                    <option value="endpoint" selected>Especifico por endpoint</option>
+                    <option value="global">Global (todos los endpoints)</option>
+                </select>
+            </div>
+            <div id="endpoint-select-wrap" class="md:col-span-2">
+                <label class="block text-sm text-gray-400 mb-1">Endpoints (multi-select)</label>
+                <div id="endpoint-multiselect" class="relative">
+                    <button type="button" id="endpoint-multiselect-trigger" class="w-full min-h-10 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-left text-sm text-gray-100 focus:border-emerald-400 focus:outline-none transition disabled:cursor-not-allowed disabled:opacity-60">
+                        <span id="endpoint-multiselect-value">Selecciona uno o varios endpoints</span>
+                    </button>
+                    <div id="endpoint-multiselect-panel" class="hidden absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-2xl">
+                        <div class="p-2 border-b border-gray-800">
+                            <input type="text" id="endpoint-search" placeholder="Buscar endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                        <div id="endpoint-options" class="max-h-56 overflow-y-auto p-1">
+                            {{range .endpoints}}
+                            <button type="button" data-endpoint-option data-endpoint-item data-endpoint-value="{{.ID}}" data-endpoint-label="{{.Name}} {{.Slug}}" class="w-full text-left flex items-start gap-2 rounded px-2 py-2 text-sm text-gray-200 hover:bg-gray-800 cursor-pointer transition" aria-pressed="false">
+                                <span class="flex flex-col leading-tight">
+                                    <span>{{.Name}}</span>
+                                    <span class="text-xs text-gray-500">/in/{{.Slug}}</span>
+                                </span>
+                            </button>
+                            {{end}}
+                        </div>
+                        <div class="p-2 border-t border-gray-800 flex justify-between items-center">
+                            <p id="endpoint-selected-count" class="text-xs text-gray-400">0 seleccionados</p>
+                            <button type="button" id="endpoint-clear" class="text-xs text-gray-300 hover:text-gray-100">Limpiar</button>
+                        </div>
+                    </div>
+                    <div id="endpoint-hidden-inputs"></div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Puedes seleccionar multiples endpoints en la lista.</p>
+            </div>
+        </div>
+
+        <div id="global-excluded-wrap" class="hidden">
+            <label class="block text-sm text-gray-400 mb-1">Excluir endpoints (solo global)</label>
+            <div id="global-excluded-multiselect" data-ms-root data-ms-name="excluded_endpoint_ids" class="relative">
+                <button type="button" data-ms-trigger class="w-full min-h-10 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-left text-sm text-gray-100 focus:border-emerald-400 focus:outline-none transition disabled:cursor-not-allowed disabled:opacity-60">
+                    <span data-ms-value>Selecciona endpoints a excluir</span>
+                </button>
+                <div data-ms-panel class="hidden absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-2xl">
+                    <div class="p-2 border-b border-gray-800">
+                        <input type="text" data-ms-search placeholder="Buscar endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                    </div>
+                    <div data-ms-options class="max-h-56 overflow-y-auto p-1">
+                        {{range .endpoints}}
+                        <button type="button" data-ms-item data-ms-value-item="{{.ID}}" data-ms-label="{{.Name}} {{.Slug}}" class="w-full text-left flex items-start gap-2 rounded px-2 py-2 text-sm text-gray-200 hover:bg-gray-800 cursor-pointer transition" aria-pressed="false">
+                            <span class="flex flex-col leading-tight">
+                                <span>{{.Name}}</span>
+                                <span class="text-xs text-gray-500">/in/{{.Slug}}</span>
+                            </span>
+                        </button>
+                        {{end}}
+                    </div>
+                    <div class="p-2 border-t border-gray-800 flex justify-between items-center">
+                        <p data-ms-count class="text-xs text-gray-400">0 seleccionados</p>
+                        <button type="button" data-ms-clear class="text-xs text-gray-300 hover:text-gray-100">Limpiar</button>
+                    </div>
+                </div>
+                <div data-ms-hidden></div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Si esta regla es global, no se aplicara en endpoints seleccionados.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-sm text-gray-400 mb-1">Nombre</label>
+                <input type="text" name="name" required minlength="3" maxlength="100" placeholder="ej: Simular timeout proveedor" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Metodo</label>
+                <select name="method" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                    <option value="">ANY</option>
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="PATCH">PATCH</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Prioridad</label>
+                <input type="number" name="priority" value="100" min="1" max="10000" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+            </div>
+        </div>
+
+        <details class="rounded border border-gray-700 bg-gray-900/40 p-4">
+            <summary class="cursor-pointer text-sm text-gray-300">Condiciones de match (opcional)</summary>
+            <div class="mt-3 space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Path mode</label>
+                        <select name="path_mode" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            <option value="any" selected>any</option>
+                            <option value="exact">exact</option>
+                            <option value="prefix">prefix</option>
+                            <option value="regex">regex</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs text-gray-400 mb-1">Path value</label>
+                        <input type="text" name="path_value" placeholder="/in/mi-endpoint" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Query mode + JSON</label>
+                        <select name="query_mode" class="w-full mb-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            <option value="any" selected>any</option>
+                            <option value="contains">contains</option>
+                            <option value="exact">exact</option>
+                        </select>
+                        <textarea name="query_json" rows="2" placeholder='{"event":"deploy"}' class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Headers mode + JSON</label>
+                        <select name="headers_mode" class="w-full mb-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            <option value="any" selected>any</option>
+                            <option value="contains">contains</option>
+                            <option value="exact">exact</option>
+                        </select>
+                        <textarea name="headers_json" rows="2" placeholder='{"X-Env":"prod"}' class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Body mode</label>
+                        <select name="body_mode" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            <option value="any" selected>any</option>
+                            <option value="contains">contains</option>
+                            <option value="exact">exact</option>
+                            <option value="regex">regex</option>
+                            <option value="json">json</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs text-gray-400 mb-1">Body pattern</label>
+                        <textarea name="body_pattern" rows="2" placeholder='{"status":"ok"}' class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none"></textarea>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Response status</label>
+                <input type="number" name="response_status" value="200" min="100" max="599" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Delay (ms)</label>
+                <input type="number" name="delay_ms" value="0" min="0" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+            </div>
+            <div class="flex items-end">
+                <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+                    <input type="checkbox" name="is_active" checked class="rounded border-gray-600 bg-gray-900">
+                    Activa
+                </label>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Response headers (JSON)</label>
+                <textarea name="response_headers" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{"Content-Type":"application/json"}</textarea>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Response body (JSON)</label>
+                <textarea name="response_body" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{"status":"mocked"}</textarea>
+            </div>
+        </div>
+
+        <div class="flex justify-end">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium transition inline-flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                Crear regla
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <section class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h3 class="text-lg font-semibold mb-4 text-blue-300">Reglas Globales</h3>
+        {{if .globalRules}}
+        <div class="space-y-3">
+            {{range .globalRules}}
+            <article class="rounded border border-gray-700 bg-gray-900/40 p-3">
+                <div class="flex items-center justify-between gap-2">
+                    <div>
+                        <p class="text-sm font-medium text-gray-100">{{.Rule.Name}}</p>
+                        <p class="text-xs text-gray-500">Global · #{{.Rule.ID}} · Priority {{.Rule.Priority}} · Hits {{.Rule.HitCount}}</p>
+                        {{if gt (len .ExcludedEndpointSet) 0}}
+                        <div class="relative mt-1 inline-flex items-center group">
+                            <span class="text-xs text-amber-300 border border-amber-500/40 rounded px-2 py-0.5 cursor-help">Excluye {{len .ExcludedEndpointSet}} endpoint{{if ne (len .ExcludedEndpointSet) 1}}s{{end}}</span>
+                            <div class="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden group-hover:block group-focus-within:block w-80 whitespace-pre-line rounded border border-gray-700 bg-gray-950 px-3 py-2 text-xs text-gray-200 shadow-xl">
+                                {{.ExcludedEndpointTooltip}}
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="toggleRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border {{if .Rule.IsActive}}border-emerald-500/40 text-emerald-300{{else}}border-gray-600 text-gray-300{{end}}">{{if .Rule.IsActive}}Activa{{else}}Inactiva{{end}}</button>
+                        <button type="button" onclick="openEditModal('rule-global-{{.Rule.ID}}')" class="px-2 py-1 text-xs rounded border border-blue-500/40 text-blue-300">Editar</button>
+                        <button type="button" onclick="deleteRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border border-red-500/40 text-red-300">Eliminar</button>
+                    </div>
+                </div>
+            </article>
+
+            <template id="rule-global-{{.Rule.ID}}">
+                <form method="POST" action="/mocks/{{.Rule.ID}}" class="space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{$.csrfToken}}">
+                    <input type="hidden" name="scope" value="global">
+
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Excluir endpoints (solo global)</label>
+                        {{$view := .}}
+                        <div data-ms-root data-ms-name="excluded_endpoint_ids" class="relative">
+                            <button type="button" data-ms-trigger class="w-full min-h-10 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-left text-sm text-gray-100 focus:border-emerald-400 focus:outline-none transition">
+                                <span data-ms-value>Selecciona endpoints a excluir</span>
+                            </button>
+                            <div data-ms-panel class="hidden absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-2xl">
+                                <div class="p-2 border-b border-gray-800">
+                                    <input type="text" data-ms-search placeholder="Buscar endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                </div>
+                                <div data-ms-options class="max-h-56 overflow-y-auto p-1">
+                                    {{range $.endpoints}}
+                                    <button type="button" data-ms-item data-ms-value-item="{{.ID}}" data-ms-label="{{.Name}} {{.Slug}}" data-ms-selected="{{if index $view.ExcludedEndpointSet .ID}}true{{else}}false{{end}}" class="w-full text-left flex items-start gap-2 rounded px-2 py-2 text-sm text-gray-200 hover:bg-gray-800 cursor-pointer transition" aria-pressed="false">
+                                        <span class="flex flex-col leading-tight">
+                                            <span>{{.Name}}</span>
+                                            <span class="text-xs text-gray-500">/in/{{.Slug}}</span>
+                                        </span>
+                                    </button>
+                                    {{end}}
+                                </div>
+                                <div class="p-2 border-t border-gray-800 flex justify-between items-center">
+                                    <p data-ms-count class="text-xs text-gray-400">0 seleccionados</p>
+                                    <button type="button" data-ms-clear class="text-xs text-gray-300 hover:text-gray-100">Limpiar</button>
+                                </div>
+                            </div>
+                            <div data-ms-hidden></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Esta regla global se ignorara para endpoints seleccionados.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm text-gray-400 mb-1">Nombre</label>
+                            <input type="text" name="name" value="{{.Rule.Name}}" required minlength="3" maxlength="100" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Metodo</label>
+                            <select name="method" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                <option value="" {{if or (eq .Rule.Method "") (eq .Rule.Method "ANY") (eq .Rule.Method "*")}}selected{{end}}>ANY</option>
+                                <option value="GET" {{if eq .Rule.Method "GET"}}selected{{end}}>GET</option>
+                                <option value="POST" {{if eq .Rule.Method "POST"}}selected{{end}}>POST</option>
+                                <option value="PUT" {{if eq .Rule.Method "PUT"}}selected{{end}}>PUT</option>
+                                <option value="PATCH" {{if eq .Rule.Method "PATCH"}}selected{{end}}>PATCH</option>
+                                <option value="DELETE" {{if eq .Rule.Method "DELETE"}}selected{{end}}>DELETE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Prioridad</label>
+                            <input type="number" name="priority" value="{{.Rule.Priority}}" min="1" max="10000" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <details class="rounded border border-gray-700 bg-gray-900/40 p-4" open>
+                        <summary class="cursor-pointer text-sm text-gray-300">Condiciones de match (opcional)</summary>
+                        <div class="mt-3 space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Path mode</label>
+                                    <select name="path_mode" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq .Rule.PathMode "any"}}selected{{end}}>any</option>
+                                        <option value="exact" {{if eq .Rule.PathMode "exact"}}selected{{end}}>exact</option>
+                                        <option value="prefix" {{if eq .Rule.PathMode "prefix"}}selected{{end}}>prefix</option>
+                                        <option value="regex" {{if eq .Rule.PathMode "regex"}}selected{{end}}>regex</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs text-gray-400 mb-1">Path value</label>
+                                    <input type="text" name="path_value" value="{{.Rule.PathValue}}" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Query mode + JSON</label>
+                                    <select name="query_mode" class="w-full mb-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq .Rule.QueryMode "any"}}selected{{end}}>any</option>
+                                        <option value="contains" {{if eq .Rule.QueryMode "contains"}}selected{{end}}>contains</option>
+                                        <option value="exact" {{if eq .Rule.QueryMode "exact"}}selected{{end}}>exact</option>
+                                    </select>
+                                    <textarea name="query_json" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.QueryJSON}}</textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Headers mode + JSON</label>
+                                    <select name="headers_mode" class="w-full mb-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq .Rule.HeadersMode "any"}}selected{{end}}>any</option>
+                                        <option value="contains" {{if eq .Rule.HeadersMode "contains"}}selected{{end}}>contains</option>
+                                        <option value="exact" {{if eq .Rule.HeadersMode "exact"}}selected{{end}}>exact</option>
+                                    </select>
+                                    <textarea name="headers_json" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.HeadersJSON}}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Body mode</label>
+                                    <select name="body_mode" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq .Rule.BodyMode "any"}}selected{{end}}>any</option>
+                                        <option value="contains" {{if eq .Rule.BodyMode "contains"}}selected{{end}}>contains</option>
+                                        <option value="exact" {{if eq .Rule.BodyMode "exact"}}selected{{end}}>exact</option>
+                                        <option value="regex" {{if eq .Rule.BodyMode "regex"}}selected{{end}}>regex</option>
+                                        <option value="json" {{if eq .Rule.BodyMode "json"}}selected{{end}}>json</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs text-gray-400 mb-1">Body pattern</label>
+                                    <textarea name="body_pattern" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.BodyPattern}}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Response status</label>
+                            <input type="number" name="response_status" value="{{.Rule.ResponseStatus}}" min="100" max="599" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Delay (ms)</label>
+                            <input type="number" name="delay_ms" value="{{.Rule.DelayMs}}" min="0" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                        <div class="flex items-end">
+                            <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+                                <input type="checkbox" name="is_active" {{if .Rule.IsActive}}checked{{end}} class="rounded border-gray-600 bg-gray-900">
+                                Activa
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Response headers (JSON)</label>
+                            <textarea name="response_headers" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseHeaders}}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Response body (JSON)</label>
+                            <textarea name="response_body" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseBody}}</textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium">Guardar cambios</button>
+                    </div>
+                </form>
+            </template>
+            {{end}}
+        </div>
+        {{else}}
+        <p class="text-sm text-gray-500">No hay reglas globales.</p>
+        {{end}}
+    </section>
+
+    <section class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h3 class="text-lg font-semibold mb-4 text-emerald-300">Reglas por Endpoint</h3>
+        {{if .endpointRules}}
+        <div class="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+            {{range .endpointRules}}
+            <article class="rounded border border-gray-700 bg-gray-900/30 p-3">
+                <div class="flex items-center justify-between gap-2">
+                    <div>
+                        <p class="text-sm font-medium text-gray-100">{{.Rule.Name}}</p>
+                        <p class="text-xs text-gray-500">{{if .EndpointName}}{{.EndpointName}}{{else}}Endpoint desconocido{{end}} {{if .EndpointSlug}}(/in/{{.EndpointSlug}}){{end}}</p>
+                        <p class="text-xs text-gray-500">#{{.Rule.ID}} · P{{.Rule.Priority}} · {{if .Rule.IsActive}}Activa{{else}}Inactiva{{end}} · Hits {{.Rule.HitCount}}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="toggleRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border {{if .Rule.IsActive}}border-emerald-500/40 text-emerald-300{{else}}border-gray-600 text-gray-300{{end}}">{{if .Rule.IsActive}}Activa{{else}}Inactiva{{end}}</button>
+                        <button type="button" onclick="openEditModal('rule-endpoint-{{.Rule.ID}}')" class="px-2 py-1 text-xs rounded border border-blue-500/40 text-blue-300">Ver/Editar</button>
+                        <button type="button" onclick="deleteRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border border-red-500/40 text-red-300">Eliminar</button>
+                    </div>
+                </div>
+            </article>
+
+            <template id="rule-endpoint-{{.Rule.ID}}">
+                <form method="POST" action="/mocks/{{.Rule.ID}}" class="space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{$.csrfToken}}">
+                    <input type="hidden" name="scope" value="endpoint">
+                    {{if .Rule.EndpointID}}<input type="hidden" name="endpoint_id" value="{{.Rule.EndpointID}}">{{end}}
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm text-gray-400 mb-1">Nombre</label>
+                            <input type="text" name="name" value="{{.Rule.Name}}" required minlength="3" maxlength="100" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Metodo</label>
+                            <select name="method" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                <option value="" {{if or (eq .Rule.Method "") (eq .Rule.Method "ANY") (eq .Rule.Method "*")}}selected{{end}}>ANY</option>
+                                <option value="GET" {{if eq .Rule.Method "GET"}}selected{{end}}>GET</option>
+                                <option value="POST" {{if eq .Rule.Method "POST"}}selected{{end}}>POST</option>
+                                <option value="PUT" {{if eq .Rule.Method "PUT"}}selected{{end}}>PUT</option>
+                                <option value="PATCH" {{if eq .Rule.Method "PATCH"}}selected{{end}}>PATCH</option>
+                                <option value="DELETE" {{if eq .Rule.Method "DELETE"}}selected{{end}}>DELETE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Prioridad</label>
+                            <input type="number" name="priority" value="{{.Rule.Priority}}" min="1" max="10000" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <details class="rounded border border-gray-700 bg-gray-900/40 p-4" open>
+                        <summary class="cursor-pointer text-sm text-gray-300">Condiciones de match (opcional)</summary>
+                        <div class="mt-3 space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Path mode</label>
+                                    <select name="path_mode" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq .Rule.PathMode "any"}}selected{{end}}>any</option>
+                                        <option value="exact" {{if eq .Rule.PathMode "exact"}}selected{{end}}>exact</option>
+                                        <option value="prefix" {{if eq .Rule.PathMode "prefix"}}selected{{end}}>prefix</option>
+                                        <option value="regex" {{if eq .Rule.PathMode "regex"}}selected{{end}}>regex</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs text-gray-400 mb-1">Path value</label>
+                                    <input type="text" name="path_value" value="{{.Rule.PathValue}}" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Query mode + JSON</label>
+                                    <select name="query_mode" class="w-full mb-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq .Rule.QueryMode "any"}}selected{{end}}>any</option>
+                                        <option value="contains" {{if eq .Rule.QueryMode "contains"}}selected{{end}}>contains</option>
+                                        <option value="exact" {{if eq .Rule.QueryMode "exact"}}selected{{end}}>exact</option>
+                                    </select>
+                                    <textarea name="query_json" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.QueryJSON}}</textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Headers mode + JSON</label>
+                                    <select name="headers_mode" class="w-full mb-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq .Rule.HeadersMode "any"}}selected{{end}}>any</option>
+                                        <option value="contains" {{if eq .Rule.HeadersMode "contains"}}selected{{end}}>contains</option>
+                                        <option value="exact" {{if eq .Rule.HeadersMode "exact"}}selected{{end}}>exact</option>
+                                    </select>
+                                    <textarea name="headers_json" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.HeadersJSON}}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Body mode</label>
+                                    <select name="body_mode" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                        <option value="any" {{if eq .Rule.BodyMode "any"}}selected{{end}}>any</option>
+                                        <option value="contains" {{if eq .Rule.BodyMode "contains"}}selected{{end}}>contains</option>
+                                        <option value="exact" {{if eq .Rule.BodyMode "exact"}}selected{{end}}>exact</option>
+                                        <option value="regex" {{if eq .Rule.BodyMode "regex"}}selected{{end}}>regex</option>
+                                        <option value="json" {{if eq .Rule.BodyMode "json"}}selected{{end}}>json</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs text-gray-400 mb-1">Body pattern</label>
+                                    <textarea name="body_pattern" rows="2" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.BodyPattern}}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Response status</label>
+                            <input type="number" name="response_status" value="{{.Rule.ResponseStatus}}" min="100" max="599" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Delay (ms)</label>
+                            <input type="number" name="delay_ms" value="{{.Rule.DelayMs}}" min="0" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        </div>
+                        <div class="flex items-end">
+                            <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+                                <input type="checkbox" name="is_active" {{if .Rule.IsActive}}checked{{end}} class="rounded border-gray-600 bg-gray-900">
+                                Activa
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Response headers (JSON)</label>
+                            <textarea name="response_headers" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseHeaders}}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Response body (JSON)</label>
+                            <textarea name="response_body" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-100 font-mono focus:border-emerald-400 focus:outline-none">{{.Rule.ResponseBody}}</textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium">Guardar cambios</button>
+                    </div>
+                </form>
+            </template>
+            {{end}}
+        </div>
+        {{else}}
+        <p class="text-sm text-gray-500">No hay reglas especificas por endpoint.</p>
+        {{end}}
+    </section>
+</div>
+
+<div id="edit-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="w-full max-w-3xl rounded-xl border border-gray-700 bg-gray-900 shadow-2xl">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+            <h4 class="text-sm font-semibold text-gray-100">Editar Mock Rule</h4>
+            <button type="button" onclick="closeEditModal()" class="text-gray-400 hover:text-gray-200">x</button>
+        </div>
+        <div id="edit-modal-body" class="p-5 max-h-[80vh] overflow-y-auto"></div>
+    </div>
+</div>
+
+<script>
+function apiFetch(url, options) {
+    const sender = window.csrfFetch || fetch;
+    return sender(url, options);
+}
+
+async function deleteRule(mockId) {
+    const proceed = await window.appConfirm('Eliminar esta mock rule?', 'Eliminar regla');
+    if (!proceed) return;
+    const res = await apiFetch('/mocks/' + mockId, { method: 'DELETE' });
+    if (!res.ok) {
+        await window.appAlert('No se pudo eliminar la regla.', 'Error');
+        return;
+    }
+    window.location.reload();
+}
+
+async function toggleRule(mockId) {
+    const res = await apiFetch('/mocks/' + mockId + '/toggle', { method: 'POST' });
+    if (!res.ok) {
+        await window.appAlert('No se pudo cambiar el estado de la regla.', 'Error');
+        return;
+    }
+    window.location.reload();
+}
+
+function openEditModal(templateId) {
+    const tpl = document.getElementById(templateId);
+    const modal = document.getElementById('edit-modal');
+    const body = document.getElementById('edit-modal-body');
+    if (!tpl || !modal || !body) return;
+    body.innerHTML = tpl.innerHTML;
+    initCustomMultiSelects(body);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('edit-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function initCustomMultiSelect(root, options) {
+    const trigger = root.querySelector('[data-ms-trigger]');
+    const panel = root.querySelector('[data-ms-panel]');
+    const value = root.querySelector('[data-ms-value]');
+    const count = root.querySelector('[data-ms-count]');
+    const hidden = root.querySelector('[data-ms-hidden]');
+    const search = root.querySelector('[data-ms-search]');
+    const clear = root.querySelector('[data-ms-clear]');
+    const items = Array.from(root.querySelectorAll('[data-ms-item]'));
+    const selected = new Set();
+    const inputName = root.getAttribute('data-ms-name') || (options && options.inputName) || 'values';
+
+    function selectedValues() {
+        return Array.from(selected);
+    }
+
+    function renderHiddenInputs() {
+        if (!hidden) return;
+        hidden.innerHTML = '';
+        selectedValues().forEach(v => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = inputName;
+            input.value = v;
+            hidden.appendChild(input);
+        });
+    }
+
+    function renderSummary() {
+        const labels = items
+            .filter(item => selected.has(item.getAttribute('data-ms-value-item') || ''))
+            .map(item => item.getAttribute('data-ms-label') || '')
+            .filter(Boolean);
+        if (count) count.textContent = labels.length + ' seleccionados';
+        if (!value) return;
+        if (labels.length === 0) {
+            value.textContent = (options && options.emptyLabel) || 'Selecciona opciones';
+            return;
+        }
+        if (labels.length <= 2) {
+            value.textContent = labels.join(', ');
+            return;
+        }
+        value.textContent = labels.slice(0, 2).join(', ') + ' +' + (labels.length - 2) + ' mas';
+    }
+
+    function renderStates() {
+        items.forEach(item => {
+            const itemValue = item.getAttribute('data-ms-value-item') || '';
+            const isSelected = selected.has(itemValue);
+            item.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+            item.classList.toggle('bg-gray-800', isSelected);
+            item.classList.toggle('text-emerald-200', isSelected);
+            item.classList.toggle('ring-1', isSelected);
+            item.classList.toggle('ring-emerald-500\/40', isSelected);
+        });
+    }
+
+    function syncAll() {
+        renderHiddenInputs();
+        renderSummary();
+        renderStates();
+    }
+
+    function clearSelection() {
+        selected.clear();
+        syncAll();
+    }
+
+    items.forEach(item => {
+        if (item.getAttribute('data-ms-selected') === 'true') {
+            const preset = item.getAttribute('data-ms-value-item') || '';
+            if (preset) selected.add(preset);
+        }
+        item.addEventListener('click', function() {
+            const v = item.getAttribute('data-ms-value-item') || '';
+            if (!v) return;
+            if (selected.has(v)) selected.delete(v); else selected.add(v);
+            syncAll();
+        });
+    });
+
+    if (trigger && panel) {
+        trigger.addEventListener('click', function() {
+            if (trigger.disabled) return;
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden') && search) search.focus();
+        });
+    }
+
+    if (clear) clear.addEventListener('click', clearSelection);
+
+    if (search) {
+        search.addEventListener('input', function() {
+            const term = search.value.toLowerCase().trim();
+            items.forEach(item => {
+                const label = (item.getAttribute('data-ms-label') || '').toLowerCase();
+                item.classList.toggle('hidden', term !== '' && !label.includes(term));
+            });
+        });
+    }
+
+    document.addEventListener('click', function(ev) {
+        if (!panel || panel.classList.contains('hidden')) return;
+        if (!root.contains(ev.target)) panel.classList.add('hidden');
+    });
+
+    syncAll();
+
+    return {
+        clear: clearSelection,
+        close: function() {
+            if (panel) panel.classList.add('hidden');
+        },
+        setDisabled: function(disabled) {
+            if (trigger) trigger.disabled = !!disabled;
+            if (disabled) {
+                clearSelection();
+                if (panel) panel.classList.add('hidden');
+            }
+        },
+        selectedValues: selectedValues,
+    };
+}
+
+function initCustomMultiSelects(scopeRoot) {
+    const nodes = Array.from(scopeRoot.querySelectorAll('[data-ms-root]'));
+    return nodes.map(node => initCustomMultiSelect(node));
+}
+
+(function() {
+    const scopeSelect = document.getElementById('scope-select');
+    const endpointWrap = document.getElementById('endpoint-select-wrap');
+    const createForm = document.getElementById('mock-create-form');
+    const globalExcludedWrap = document.getElementById('global-excluded-wrap');
+    const globalExcludedSelect = document.getElementById('global-excluded-select');
+    const globalExcludedRoot = document.getElementById('global-excluded-multiselect');
+    const endpointTrigger = document.getElementById('endpoint-multiselect-trigger');
+    const endpointPanel = document.getElementById('endpoint-multiselect-panel');
+    const endpointValue = document.getElementById('endpoint-multiselect-value');
+    const endpointCount = document.getElementById('endpoint-selected-count');
+    const endpointHiddenInputs = document.getElementById('endpoint-hidden-inputs');
+    const endpointSearch = document.getElementById('endpoint-search');
+    const endpointClear = document.getElementById('endpoint-clear');
+    const endpointOptions = Array.from(document.querySelectorAll('[data-endpoint-option]'));
+    const endpointItems = Array.from(document.querySelectorAll('[data-endpoint-item]'));
+    const selectedEndpointSet = new Set();
+    const globalExcludedMulti = globalExcludedRoot ? initCustomMultiSelect(globalExcludedRoot, { inputName: 'excluded_endpoint_ids', emptyLabel: 'Selecciona endpoints a excluir' }) : null;
+
+    function selectedEndpointValues() {
+        return Array.from(selectedEndpointSet);
+    }
+
+    function renderEndpointOptionStates() {
+        endpointItems.forEach(item => {
+            const value = item.getAttribute('data-endpoint-value') || '';
+            const selected = selectedEndpointSet.has(value);
+            item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            item.classList.toggle('bg-gray-800', selected);
+            item.classList.toggle('text-emerald-200', selected);
+            item.classList.toggle('ring-1', selected);
+            item.classList.toggle('ring-emerald-500\/40', selected);
+        });
+    }
+
+    function renderSelectedSummary() {
+        const selectedLabels = endpointItems
+            .filter(item => {
+                const value = item.getAttribute('data-endpoint-value') || '';
+                return selectedEndpointSet.has(value);
+            })
+            .map(item => item.getAttribute('data-endpoint-label') || '')
+            .filter(Boolean);
+
+        const count = selectedLabels.length;
+        if (endpointCount) {
+            endpointCount.textContent = count + ' seleccionados';
+        }
+        if (!endpointValue) {
+            return;
+        }
+        if (count === 0) {
+            endpointValue.textContent = 'Selecciona uno o varios endpoints';
+            return;
+        }
+        if (count <= 2) {
+            endpointValue.textContent = selectedLabels.join(', ');
+            return;
+        }
+        endpointValue.textContent = selectedLabels.slice(0, 2).join(', ') + ' +' + (count - 2) + ' mas';
+    }
+
+    function renderHiddenInputs() {
+        if (!endpointHiddenInputs) {
+            return;
+        }
+        endpointHiddenInputs.innerHTML = '';
+        selectedEndpointValues().forEach(value => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'endpoint_ids';
+            input.value = value;
+            endpointHiddenInputs.appendChild(input);
+        });
+    }
+
+    function closeEndpointPanel() {
+        if (!endpointPanel) {
+            return;
+        }
+        endpointPanel.classList.add('hidden');
+    }
+
+    function clearEndpointSelection() {
+        selectedEndpointSet.clear();
+        renderSelectedSummary();
+        renderHiddenInputs();
+        renderEndpointOptionStates();
+    }
+
+    function syncEndpointUI() {
+        renderSelectedSummary();
+        renderHiddenInputs();
+        renderEndpointOptionStates();
+    }
+
+    function syncScopeUI() {
+        const isGlobal = scopeSelect && scopeSelect.value === 'global';
+        if (!endpointWrap || !endpointTrigger) return;
+        endpointWrap.classList.toggle('opacity-60', isGlobal);
+        endpointTrigger.disabled = isGlobal;
+        if (globalExcludedWrap) {
+            globalExcludedWrap.classList.toggle('hidden', !isGlobal);
+        }
+        if (globalExcludedSelect) {
+            globalExcludedSelect.disabled = !isGlobal;
+        }
+        if (globalExcludedMulti) {
+            globalExcludedMulti.setDisabled(!isGlobal);
+        }
+        if (isGlobal) {
+            clearEndpointSelection();
+            closeEndpointPanel();
+        } else if (globalExcludedSelect) {
+            Array.from(globalExcludedSelect.options).forEach(opt => {
+                opt.selected = false;
+            });
+        }
+    }
+
+    if (endpointTrigger && endpointPanel) {
+        endpointTrigger.addEventListener('click', function() {
+            if (endpointTrigger.disabled) {
+                return;
+            }
+            endpointPanel.classList.toggle('hidden');
+            if (!endpointPanel.classList.contains('hidden') && endpointSearch) {
+                endpointSearch.focus();
+            }
+        });
+    }
+
+    endpointItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const value = item.getAttribute('data-endpoint-value') || '';
+            if (!value) {
+                return;
+            }
+            if (selectedEndpointSet.has(value)) {
+                selectedEndpointSet.delete(value);
+            } else {
+                selectedEndpointSet.add(value);
+            }
+            syncEndpointUI();
+        });
+    });
+
+    if (endpointClear) {
+        endpointClear.addEventListener('click', clearEndpointSelection);
+    }
+
+    if (endpointSearch) {
+        endpointSearch.addEventListener('input', function() {
+            const term = endpointSearch.value.toLowerCase().trim();
+            endpointOptions.forEach(option => {
+                const label = (option.getAttribute('data-endpoint-label') || '').toLowerCase();
+                option.classList.toggle('hidden', term !== '' && !label.includes(term));
+            });
+        });
+    }
+
+    document.addEventListener('click', function(ev) {
+        const root = document.getElementById('endpoint-multiselect');
+        if (!root || !endpointPanel || endpointPanel.classList.contains('hidden')) {
+            return;
+        }
+        if (!root.contains(ev.target)) {
+            closeEndpointPanel();
+        }
+    });
+
+    if (scopeSelect) {
+        scopeSelect.addEventListener('change', syncScopeUI);
+        syncScopeUI();
+    }
+
+    syncEndpointUI();
+
+    if (createForm) {
+        createForm.addEventListener('submit', async function(event) {
+            if (scopeSelect && scopeSelect.value === 'endpoint') {
+                const hasSelection = selectedEndpointValues().length > 0;
+                if (!hasSelection) {
+                    event.preventDefault();
+                    await window.appAlert('Selecciona al menos un endpoint.', 'Validacion');
+                    if (endpointTrigger) {
+                        endpointTrigger.focus();
+                    }
+                    return;
+                }
+            }
+        });
+    }
+
+    const modal = document.getElementById('edit-modal');
+    if (modal) {
+        modal.addEventListener('click', function(ev) {
+            if (ev.target === modal) {
+                closeEditModal();
+            }
+        });
+    }
+})();
+</script>
+{{end}}
