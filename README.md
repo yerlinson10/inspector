@@ -12,7 +12,7 @@ Inspector es una herramienta de desarrollo escrita en Go para inspeccionar, depu
 - **Historial de peticiones** — Listado filtrable y paginado de todas las peticiones recibidas, con vista de detalle completa.
 - **Comparador de peticiones** — Vista `/requests/diff` para comparar dos capturas por método, path, headers, query y body.
 - **Gestor de Endpoints** — CRUD completo: crear, editar, eliminar y limpiar el historial de cada endpoint.
-- **Mock Rules (tipo Beeceptor/Mockoon)** — Reglas de respuesta condicional con alcance por endpoint o global, prioridad determinística, activación/desactivación y edición en modal.
+- **Mock Rules** — Reglas de respuesta condicional con alcance por endpoint o global, prioridad determinística, activación/desactivación y edición en modal.
 - **Exclusión por endpoint en reglas globales** — Una regla global puede excluir endpoints específicos para no aplicarse en esos slugs.
 - **Enviador HTTP** — Construye y envía peticiones HTTP personalizadas (método, URL, cabeceras, cuerpo) con registro del resultado.
 - **Cliente WebSocket** — Conéctate a cualquier servidor WebSocket, envía mensajes y visualiza la conversación en tiempo real.
