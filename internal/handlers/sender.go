@@ -150,8 +150,14 @@ func SendHTTP(c *gin.Context) {
 	}
 
 	// Parse headers
-	for k, v := range parsedHeaders {
-		httpReq.Header.Set(k, v)
+	for k, values := range parsedHeaders {
+		if len(values) == 0 {
+			httpReq.Header.Set(k, "")
+			continue
+		}
+		for _, value := range values {
+			httpReq.Header.Add(k, value)
+		}
 	}
 
 	client := newOutboundHTTPClient(30 * time.Second)
@@ -242,24 +248,52 @@ func SendHTTP(c *gin.Context) {
 	}))
 }
 
-func parseSenderHeadersJSON(raw string) (map[string]string, error) {
+func parseSenderHeadersJSON(raw string) (map[string][]string, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
-		return map[string]string{}, nil
+		return map[string][]string{}, nil
 	}
 
-	var headers map[string]string
-	if err := json.Unmarshal([]byte(trimmed), &headers); err != nil {
-		return nil, fmt.Errorf("headers must be a valid JSON object with string values")
+	var parsed interface{}
+	if err := json.Unmarshal([]byte(trimmed), &parsed); err != nil {
+		return nil, fmt.Errorf("headers must be a valid JSON object")
 	}
 
-	if headers == nil {
-		return map[string]string{}, nil
+	headersObject, ok := parsed.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("headers must be a JSON object")
 	}
 
-	for key := range headers {
+	if headersObject == nil {
+		return map[string][]string{}, nil
+	}
+
+	headers := make(map[string][]string, len(headersObject))
+	for key, rawValue := range headersObject {
 		if strings.TrimSpace(key) == "" {
 			return nil, fmt.Errorf("headers must not contain empty keys")
+		}
+
+		switch value := rawValue.(type) {
+		case string:
+			headers[key] = []string{value}
+		case []interface{}:
+			if len(value) == 0 {
+				headers[key] = []string{}
+				continue
+			}
+
+			list := make([]string, 0, len(value))
+			for _, item := range value {
+				text, ok := item.(string)
+				if !ok {
+					return nil, fmt.Errorf("header %q must contain only text values", key)
+				}
+				list = append(list, text)
+			}
+			headers[key] = list
+		default:
+			return nil, fmt.Errorf("header %q must be text or a list of text values", key)
 		}
 	}
 
@@ -381,9 +415,15 @@ func SentDetail(c *gin.Context) {
 		return
 	}
 
+	viewReq := req
+	viewReq.Headers = formatHeadersForDisplay(req.Headers)
+	viewReq.Body = formatBodyForDisplay(req.Body, req.Headers)
+	viewReq.ResponseHeaders = formatHeadersForDisplay(req.ResponseHeaders)
+	viewReq.ResponseBody = formatBodyForDisplay(req.ResponseBody, req.ResponseHeaders)
+
 	c.HTML(http.StatusOK, "sent_detail.html", withViewData(c, gin.H{
 		"ContentTemplate": "sent_detail_content",
-		"request":         req,
+		"request":         viewReq,
 		"title":           "Sent Request #" + id,
 	}))
 }
@@ -532,23 +572,40 @@ func replayHeadersForSender(rawHeaders string) string {
 
 	var multi map[string][]string
 	if err := json.Unmarshal([]byte(trimmed), &multi); err == nil {
+		normalized := make(map[string]interface{}, len(multi))
 		keys := make([]string, 0, len(multi))
 		for k := range multi {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
 
-		lines := make([]string, 0, len(keys))
 		for _, key := range keys {
 			values := multi[key]
-			for _, v := range values {
-				lines = append(lines, key+": "+v)
+			if len(values) == 1 {
+				normalized[key] = values[0]
+				continue
 			}
+			if len(values) == 0 {
+				normalized[key] = []string{}
+				continue
+			}
+			normalized[key] = values
 		}
-		return strings.Join(lines, "\n")
+
+		encoded, encodeErr := json.MarshalIndent(normalized, "", "  ")
+		if encodeErr == nil {
+			return string(encoded)
+		}
 	}
 
-	return trimmed
+	var single map[string]string
+	if err := json.Unmarshal([]byte(trimmed), &single); err == nil {
+		if encoded, encodeErr := json.MarshalIndent(single, "", "  "); encodeErr == nil {
+			return string(encoded)
+		}
+	}
+
+	return formatHeadersForDisplay(trimmed)
 }
 
 func replayQuerySuffix(rawQuery string) string {

@@ -61,15 +61,8 @@
 function copyAsCurl() {
     const method = '{{.Method}}';
     const targetPath = '{{$.requestTarget}}';
-    const bodyField = document.getElementById('body');
-    const body = bodyField
-        ? (window.jsonEditorTools ? window.jsonEditorTools.getValue(bodyField) : bodyField.value || '')
-        : '';
-
-    const headersField = document.getElementById('headers');
-    const headersRaw = headersField
-        ? (window.jsonEditorTools ? window.jsonEditorTools.getValue(headersField) : headersField.value || '')
-        : '';
+    const body = "{{js $.requestRawBody}}";
+    const headersRaw = "{{js $.requestRawHeaders}}";
 
     let headers = {};
     try { headers = JSON.parse(headersRaw); } catch(e) {}

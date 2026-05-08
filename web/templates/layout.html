@@ -454,6 +454,7 @@
                     allowEmpty: true,
                     requireObject: true,
                     requireStringValues: true,
+                    allowStringArrayValues: true,
                     example: { 'Content-Type': 'application/json' }
                 },
                 body: {
@@ -514,6 +515,7 @@
                 cfg.allowEmpty = parseBoolean(data.jsonAllowEmpty, cfg.allowEmpty !== undefined ? cfg.allowEmpty : true);
                 cfg.requireObject = parseBoolean(data.jsonRequireObject, !!cfg.requireObject);
                 cfg.requireStringValues = parseBoolean(data.jsonRequireStringValues, !!cfg.requireStringValues);
+                cfg.allowStringArrayValues = parseBoolean(data.jsonAllowStringArrays, !!cfg.allowStringArrayValues);
                 cfg.readOnly = parseBoolean(data.jsonReadonly, cfg.readOnly !== undefined ? !!cfg.readOnly : htmlReadOnly);
                 cfg.showActionButtons = parseBoolean(data.jsonShowActions, cfg.showActionButtons !== undefined ? !!cfg.showActionButtons : !cfg.readOnly);
                 cfg.showCopyButton = parseBoolean(data.jsonShowCopy, cfg.showCopyButton !== undefined ? !!cfg.showCopyButton : true);
@@ -539,6 +541,12 @@
 
             function isPlainObject(value) {
                 return value !== null && typeof value === 'object' && !Array.isArray(value);
+            }
+
+            function isArrayOfStrings(value) {
+                return Array.isArray(value) && value.every(function (item) {
+                    return typeof item === 'string';
+                });
             }
 
             function escapeAttrValue(value) {
@@ -611,6 +619,9 @@
                     return overrides.invalidObjectMessage || cfg.invalidObjectMessage || (cfg.title + ' debe ser un objeto JSON.');
                 }
                 if (kind === 'strings') {
+                    if (cfg.allowStringArrayValues) {
+                        return overrides.invalidStringValuesMessage || cfg.invalidStringValuesMessage || (cfg.title + ' debe contener valores de texto o listas de texto.');
+                    }
                     return overrides.invalidStringValuesMessage || cfg.invalidStringValuesMessage || (cfg.title + ' debe contener solo valores de texto.');
                 }
                 return 'JSON invalido.';
@@ -627,7 +638,9 @@
 
                 if (cfg.requireStringValues && isPlainObject(parsed)) {
                     const invalid = Object.values(parsed).some(function (value) {
-                        return typeof value !== 'string';
+                        if (typeof value === 'string') return false;
+                        if (cfg.allowStringArrayValues && isArrayOfStrings(value)) return false;
+                        return true;
                     });
                     if (invalid) {
                         return {

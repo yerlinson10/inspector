@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"sort"
 	"strconv"
@@ -59,9 +58,9 @@ func RequestDiff(c *gin.Context) {
 			compareRawSection("Method", strings.TrimSpace(leftRequest.Method), strings.TrimSpace(rightRequest.Method)),
 			compareRawSection("Path", strings.TrimSpace(leftRequest.Path), strings.TrimSpace(rightRequest.Path)),
 			compareRawSection("Remote IP", strings.TrimSpace(leftRequest.RemoteAddr), strings.TrimSpace(rightRequest.RemoteAddr)),
-			compareRawSection("Headers", prettyMaybeJSON(leftRequest.Headers), prettyMaybeJSON(rightRequest.Headers)),
-			compareRawSection("Query Params", prettyMaybeJSON(leftRequest.QueryParams), prettyMaybeJSON(rightRequest.QueryParams)),
-			compareRawSection("Body", prettyMaybeJSON(leftRequest.Body), prettyMaybeJSON(rightRequest.Body)),
+			compareRawSection("Headers", formatHeadersForDisplay(leftRequest.Headers), formatHeadersForDisplay(rightRequest.Headers)),
+			compareRawSection("Query Params", formatJSONForDisplay(leftRequest.QueryParams), formatJSONForDisplay(rightRequest.QueryParams)),
+			compareRawSection("Body", formatBodyForDisplay(leftRequest.Body, leftRequest.Headers), formatBodyForDisplay(rightRequest.Body, rightRequest.Headers)),
 		}
 		for _, section := range sections {
 			if !section.Equal {
@@ -104,21 +103,4 @@ func compareRawSection(name, left, right string) requestDiffSection {
 		Right: right,
 		Equal: strings.TrimSpace(left) == strings.TrimSpace(right),
 	}
-}
-
-func prettyMaybeJSON(raw string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return ""
-	}
-
-	var payload interface{}
-	if err := json.Unmarshal([]byte(trimmed), &payload); err == nil {
-		encoded, err := json.MarshalIndent(payload, "", "  ")
-		if err == nil {
-			return string(encoded)
-		}
-	}
-
-	return raw
 }

@@ -185,6 +185,11 @@ func RequestDetail(c *gin.Context) {
 		return
 	}
 
+	viewReq := req
+	viewReq.Headers = formatHeadersForDisplay(req.Headers)
+	viewReq.QueryParams = formatJSONForDisplay(req.QueryParams)
+	viewReq.Body = formatBodyForDisplay(req.Body, req.Headers)
+
 	var suggested models.RequestLog
 	var suggestedCompareID uint
 	if err := storage.DB.Where("endpoint_slug = ? AND id < ?", req.EndpointSlug, req.ID).Order("id DESC").First(&suggested).Error; err == nil {
@@ -193,7 +198,9 @@ func RequestDetail(c *gin.Context) {
 
 	c.HTML(http.StatusOK, "request_detail.html", gin.H{
 		"ContentTemplate":    "request_detail_content",
-		"request":            req,
+		"request":            viewReq,
+		"requestRawHeaders":  req.Headers,
+		"requestRawBody":     req.Body,
 		"requestTarget":      req.Path + replayQuerySuffix(req.QueryParams),
 		"suggestedCompareID": suggestedCompareID,
 		"title":              "Request #" + id,

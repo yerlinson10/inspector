@@ -45,7 +45,7 @@
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">Headers (JSON objeto)</label>
-                    <textarea name="headers" rows="4" data-json-editor data-json-require-object="true" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'>{{.headers}}</textarea>
+                    <textarea name="headers" rows="4" data-json-editor data-json-require-object="true" data-json-allow-string-arrays="true" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"Content-Type": "application/json", "Set-Cookie": ["a=1", "b=2"]}'>{{.headers}}</textarea>
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">Body (JSON)</label>
@@ -108,10 +108,14 @@
             }
             if (options && options.requireStringValues && parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
                 const invalidValue = Object.values(parsed).some(function(value) {
-                    return typeof value !== 'string';
+                    if (typeof value === 'string') return false;
+                    if (options.allowStringArrayValues && Array.isArray(value)) {
+                        return value.some(function(item) { return typeof item !== 'string'; });
+                    }
+                    return true;
                 });
                 if (invalidValue) {
-                    return { ok: false, message: options.invalidStringValuesMessage || 'Todos los valores deben ser texto.' };
+                    return { ok: false, message: options.invalidStringValuesMessage || 'Todos los valores deben ser texto o listas de texto.' };
                 }
             }
             return { ok: true };
@@ -134,9 +138,10 @@
             allowEmpty: true,
             requireObject: true,
             requireStringValues: true,
+            allowStringArrayValues: true,
             invalidJSONMessage: 'Headers debe ser un JSON valido.',
             invalidObjectMessage: 'Headers debe ser un objeto JSON.',
-            invalidStringValuesMessage: 'Headers debe contener solo valores de texto.'
+            invalidStringValuesMessage: 'Headers debe contener valores de texto o listas de texto.'
         });
         if (!headersValidation.ok) {
             event.preventDefault();
