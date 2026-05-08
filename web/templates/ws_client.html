@@ -36,6 +36,20 @@
 
 <script>
 let ws = null;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+let shouldStayConnected = false;
+let manualDisconnectRequested = false;
+const recentSentMessages = [];
+const RECENT_SENT_WINDOW_MS = 4000;
+const MAX_RECENT_SENT_MESSAGES = 20;
+const WS_STORAGE_URL_KEY = 'inspector.wsClient.url';
+const WS_STORAGE_KEEP_CONNECTED_KEY = 'inspector.wsClient.keepConnected';
+
+const wsURLField = document.getElementById('ws-url');
+const wsStatusField = document.getElementById('ws-status');
+const wsConnectButton = document.getElementById('btn-connect');
+const wsDisconnectButton = document.getElementById('btn-disconnect');
 const wsMessageField = document.getElementById('ws-message');
 const wsSendButton = document.getElementById('btn-send');
 
@@ -45,6 +59,142 @@ if (window.jsonEditorTools) {
 
 if (wsMessageField) {
     wsMessageField.addEventListener('input', syncSendButtonState);
+}
+
+function readStorage(key) {
+    try {
+        return localStorage.getItem(key) || '';
+    } catch (_) {
+        return '';
+    }
+}
+
+function writeStorage(key, value) {
+    try {
+        localStorage.setItem(key, value);
+    } catch (_) {}
+}
+
+function setShouldStayConnected(value) {
+    shouldStayConnected = !!value;
+    writeStorage(WS_STORAGE_KEEP_CONNECTED_KEY, shouldStayConnected ? '1' : '0');
+}
+
+function setStatus(text, tone) {
+    if (!wsStatusField) return;
+
+    const toneClass = {
+        connected: 'text-emerald-400',
+        connecting: 'text-yellow-300',
+        error: 'text-red-300',
+        disconnected: 'text-gray-400'
+    };
+
+    wsStatusField.textContent = text;
+    wsStatusField.className = 'flex items-center px-3 text-sm ' + (toneClass[tone] || toneClass.disconnected);
+}
+
+function setConnectedUI(isConnected) {
+    if (wsConnectButton) wsConnectButton.classList.toggle('hidden', !!isConnected);
+    if (wsDisconnectButton) wsDisconnectButton.classList.toggle('hidden', !isConnected);
+}
+
+function clearReconnectTimer() {
+    if (!reconnectTimer) return;
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+}
+
+function toStableJSON(value) {
+    if (Array.isArray(value)) {
+        return value.map(toStableJSON);
+    }
+    if (value && typeof value === 'object') {
+        const normalized = {};
+        Object.keys(value).sort().forEach(function(key) {
+            normalized[key] = toStableJSON(value[key]);
+        });
+        return normalized;
+    }
+    return value;
+}
+
+function buildPayloadSignatures(text) {
+    const raw = String(text || '');
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+
+    const signatures = ['raw:' + trimmed];
+    try {
+        const parsed = JSON.parse(trimmed);
+        signatures.push('json:' + JSON.stringify(toStableJSON(parsed)));
+    } catch (_) {}
+
+    return signatures;
+}
+
+function hasAnySharedSignature(left, right) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length === 0 || right.length === 0) {
+        return false;
+    }
+    const rightSet = new Set(right);
+    return left.some(function(item) {
+        return rightSet.has(item);
+    });
+}
+
+function rememberSentMessage(text) {
+    const signatures = buildPayloadSignatures(text);
+    if (signatures.length === 0) return;
+
+    const now = Date.now();
+    recentSentMessages.push({ signatures: signatures, at: now });
+
+    while (recentSentMessages.length > MAX_RECENT_SENT_MESSAGES) {
+        recentSentMessages.shift();
+    }
+
+    for (let i = recentSentMessages.length - 1; i >= 0; i--) {
+        if (now - recentSentMessages[i].at > RECENT_SENT_WINDOW_MS) {
+            recentSentMessages.splice(i, 1);
+        }
+    }
+}
+
+function isLikelyEchoMessage(text) {
+    const incomingSignatures = buildPayloadSignatures(text);
+    if (incomingSignatures.length === 0) return false;
+
+    const now = Date.now();
+    for (let i = recentSentMessages.length - 1; i >= 0; i--) {
+        const item = recentSentMessages[i];
+        if (now - item.at > RECENT_SENT_WINDOW_MS) {
+            recentSentMessages.splice(i, 1);
+            continue;
+        }
+        if (hasAnySharedSignature(item.signatures, incomingSignatures)) {
+            // Consume the matched sent payload once to avoid marking later real messages as echo.
+            recentSentMessages.splice(i, 1);
+            return true;
+        }
+    }
+    return false;
+}
+
+function scheduleReconnect(url) {
+    if (!shouldStayConnected || reconnectTimer) return;
+
+    reconnectAttempts += 1;
+    const delayMs = Math.min(15000, 1000 * Math.pow(2, reconnectAttempts - 1));
+    const seconds = Math.ceil(delayMs / 1000);
+
+    setStatus('Reconnecting in ' + seconds + 's...', 'connecting');
+    addMessage('system', 'Connection lost. Retrying in ' + seconds + 's...');
+
+    reconnectTimer = setTimeout(function() {
+        reconnectTimer = null;
+        connectWS({ url: url, isReconnect: true, silent: true });
+    }, delayMs);
 }
 
 function validateWSMessage(showAlert) {
@@ -88,7 +238,7 @@ function validateWSMessage(showAlert) {
 
 function syncSendButtonState() {
     if (!wsSendButton) return;
-    if (!ws) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
         wsSendButton.disabled = true;
         return;
     }
@@ -96,12 +246,27 @@ function syncSendButtonState() {
     wsSendButton.disabled = !validation.ok;
 }
 
-function connectWS() {
-    const url = document.getElementById('ws-url').value.trim();
+function connectWS(options) {
+    const opts = options || {};
+    const url = String(opts.url || (wsURLField ? wsURLField.value : '') || '').trim();
     if (!url) {
-        window.appAlert('Enter a WebSocket URL', 'Missing URL');
+        if (!opts.silent) {
+            window.appAlert('Enter a WebSocket URL', 'Missing URL');
+        }
         return;
     }
+
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
+
+    if (wsURLField) wsURLField.value = url;
+    writeStorage(WS_STORAGE_URL_KEY, url);
+    setShouldStayConnected(true);
+    manualDisconnectRequested = false;
+    clearReconnectTimer();
+    setStatus(opts.isReconnect ? 'Reconnecting...' : 'Connecting...', 'connecting');
+    setConnectedUI(false);
 
     // Connect through our proxy
     const proxyUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/send/ws-proxy?url=${encodeURIComponent(url)}`;
@@ -110,43 +275,69 @@ function connectWS() {
         ws = new WebSocket(proxyUrl);
     } catch(e) {
         addMessage('error', 'Failed to connect: ' + e.message);
+        setStatus('Connection error', 'error');
+        if (shouldStayConnected) {
+            scheduleReconnect(url);
+        }
         return;
     }
 
     ws.onopen = function() {
-        document.getElementById('ws-status').textContent = 'Connected';
-        document.getElementById('ws-status').className = 'flex items-center px-3 text-sm text-emerald-400';
-        document.getElementById('btn-connect').classList.add('hidden');
-        document.getElementById('btn-disconnect').classList.remove('hidden');
+        reconnectAttempts = 0;
+        setStatus('Connected', 'connected');
+        setConnectedUI(true);
         syncSendButtonState();
-        addMessage('system', 'Connected to ' + url);
+        addMessage('system', opts.isReconnect ? 'Reconnected to ' + url : 'Connected to ' + url);
     };
 
     ws.onmessage = function(event) {
-        addMessage('received', event.data);
+        const payload = String(event.data || '');
+        if (isLikelyEchoMessage(payload)) {
+            addMessage('echo', payload);
+            return;
+        }
+        addMessage('received', payload);
     };
 
     ws.onclose = function() {
-        document.getElementById('ws-status').textContent = 'Disconnected';
-        document.getElementById('ws-status').className = 'flex items-center px-3 text-sm text-gray-400';
-        document.getElementById('btn-connect').classList.remove('hidden');
-        document.getElementById('btn-disconnect').classList.add('hidden');
-        addMessage('system', 'Connection closed');
+        const wasManual = manualDisconnectRequested;
+        manualDisconnectRequested = false;
         ws = null;
+        setConnectedUI(false);
         syncSendButtonState();
+
+        if (wasManual || !shouldStayConnected) {
+            setStatus('Disconnected', 'disconnected');
+            addMessage('system', 'Connection closed');
+            return;
+        }
+
+        scheduleReconnect(url);
     };
 
     ws.onerror = function() {
         addMessage('error', 'WebSocket error occurred');
+        setStatus('Connection error', 'error');
     };
 }
 
 function disconnectWS() {
-    if (ws) ws.close();
+    setShouldStayConnected(false);
+    manualDisconnectRequested = true;
+    clearReconnectTimer();
+
+    if (ws) {
+        ws.close();
+        return;
+    }
+
+    setStatus('Disconnected', 'disconnected');
+    setConnectedUI(false);
+    syncSendButtonState();
 }
 
 function sendMessage() {
-    if (!ws) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
     const validation = validateWSMessage(true);
     if (!validation.ok) return;
 
@@ -155,7 +346,14 @@ function sendMessage() {
         : document.getElementById('ws-message').value;
     if (!msg || !msg.trim()) return;
 
-    ws.send(msg);
+    try {
+        ws.send(msg);
+    } catch (e) {
+        addMessage('error', 'Failed to send: ' + e.message);
+        return;
+    }
+
+    rememberSentMessage(msg);
     addMessage('sent', msg);
     if (window.jsonEditorTools && wsMessageField) {
         window.jsonEditorTools.setValue(wsMessageField, '');
@@ -172,10 +370,11 @@ function addMessage(type, text) {
     const colors = {
         sent: 'text-blue-300 border-blue-800',
         received: 'text-emerald-300 border-emerald-800',
+        echo: 'text-amber-300 border-amber-800',
         system: 'text-gray-400 border-gray-700',
         error: 'text-red-300 border-red-800'
     };
-    const labels = { sent: '→ SENT', received: '← RECV', system: '● SYS', error: '✕ ERR' };
+    const labels = { sent: '→ SENT', received: '← RECV', echo: '↺ ECHO', system: '● SYS', error: '✕ ERR' };
 
     const div = document.createElement('div');
     div.className = `border-l-2 pl-3 py-1 ${colors[type]} fade-in`;
@@ -194,6 +393,22 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function restoreConnectionPreference() {
+    const savedURL = readStorage(WS_STORAGE_URL_KEY);
+    if (wsURLField && savedURL && !wsURLField.value.trim()) {
+        wsURLField.value = savedURL;
+    }
+
+    shouldStayConnected = readStorage(WS_STORAGE_KEEP_CONNECTED_KEY) === '1';
+    if (shouldStayConnected && savedURL) {
+        connectWS({ url: savedURL, isReconnect: true, silent: true });
+    } else {
+        setStatus('Disconnected', 'disconnected');
+        setConnectedUI(false);
+    }
+}
+
 syncSendButtonState();
+restoreConnectionPreference();
 </script>
 {{end}}
