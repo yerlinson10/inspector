@@ -12,6 +12,8 @@ Inspector es una herramienta de desarrollo escrita en Go para inspeccionar, depu
 - **Historial de peticiones** — Listado filtrable y paginado de todas las peticiones recibidas, con vista de detalle completa.
 - **Comparador de peticiones** — Vista `/requests/diff` para comparar dos capturas por método, path, headers, query y body.
 - **Gestor de Endpoints** — CRUD completo: crear, editar, eliminar y limpiar el historial de cada endpoint.
+- **Mock Rules (tipo Beeceptor/Mockoon)** — Reglas de respuesta condicional con alcance por endpoint o global, prioridad determinística, activación/desactivación y edición en modal.
+- **Exclusión por endpoint en reglas globales** — Una regla global puede excluir endpoints específicos para no aplicarse en esos slugs.
 - **Enviador HTTP** — Construye y envía peticiones HTTP personalizadas (método, URL, cabeceras, cuerpo) con registro del resultado.
 - **Cliente WebSocket** — Conéctate a cualquier servidor WebSocket, envía mensajes y visualiza la conversación en tiempo real.
 - **Historial de envíos avanzado** — Registro de salidas con filtros por tipo, método, estado, texto y rango de fechas.
@@ -418,6 +420,50 @@ curl -X POST http://localhost:9090/in/mi-endpoint \
 2. Elige método, URL, cabeceras y cuerpo.
 3. Haz clic en **Send** — el resultado aparece inmediatamente.
 
+### Mocking de endpoints (Mock Rules)
+
+Inspector soporta mocking avanzado para simular comportamientos complejos sin tocar tu backend real.
+
+#### Dónde se administra
+
+- **Pantalla central**: `/mocks` para crear/editar/eliminar reglas globales y por endpoint.
+- **Pantalla Endpoints**: muestra reglas del endpoint en modo resumen con acciones rápidas (activar/desactivar, editar en modal, eliminar).
+
+#### Alcances disponibles
+
+- **Endpoint**: la regla solo aplica al endpoint seleccionado.
+- **Global**: aplica a todos los endpoints, excepto los que marques en **Excluir endpoints**.
+
+#### Qué puede evaluar una regla
+
+- Método HTTP (`ANY`, `GET`, `POST`, `PUT`, `PATCH`, `DELETE`).
+- Path (`any`, `exact`, `prefix`, `regex`).
+- Query params (`any`, `contains`, `exact`).
+- Headers (`any`, `contains`, `exact`).
+- Body (`any`, `contains`, `exact`, `regex`, `json`).
+
+#### Qué puede responder una regla
+
+- Status HTTP.
+- Headers de respuesta (JSON).
+- Body de respuesta (JSON/texto).
+- Delay en milisegundos para simular latencia.
+- Estado activa/inactiva.
+
+#### Orden de evaluación (precedencia)
+
+1. `Priority ASC` (menor número se evalúa primero).
+2. Si hay empate de prioridad: una regla de alcance **endpoint** gana sobre una **global**.
+3. Si persiste el empate: `ID ASC`.
+4. Si una regla global excluye el endpoint actual, se omite esa regla.
+5. Si ninguna regla hace match, se usa la respuesta estática del endpoint (fallback).
+
+#### Extras de operación
+
+- `HitCount` por regla para ver cuántas veces fue usada.
+- Toggle de activación sin borrar la regla.
+- Cambios de reglas emiten evento en tiempo real `mock_changed`.
+
 ### Cliente WebSocket
 
 1. Ve a **WS Client** en el menú.
@@ -461,6 +507,29 @@ curl -X POST http://localhost:9090/in/mi-endpoint \
 | `POST` | `/endpoints/:id` | Actualizar endpoint (fallback para formularios HTML) |
 | `DELETE` | `/endpoints/:id` | Eliminar endpoint y sus registros |
 | `POST` | `/endpoints/:id/clear` | Limpiar historial de peticiones del endpoint |
+
+#### Mock Rules por endpoint
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/endpoints/:id/mocks` | Lista reglas mock asociadas al endpoint |
+| `POST` | `/endpoints/:id/mocks` | Crea regla mock para ese endpoint |
+| `PUT` | `/endpoints/:id/mocks/:mockId` | Actualiza regla mock del endpoint |
+| `POST` | `/endpoints/:id/mocks/:mockId` | Actualiza regla mock (fallback formulario HTML) |
+| `DELETE` | `/endpoints/:id/mocks/:mockId` | Elimina regla mock del endpoint |
+| `POST` | `/endpoints/:id/mocks/:mockId/toggle` | Activa/desactiva regla mock del endpoint |
+
+#### Mock Rules (gestión central)
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/mocks` | Página central de administración de Mock Rules |
+| `GET` | `/mocks/global` | Lista JSON de reglas globales |
+| `POST` | `/mocks` | Crea regla global o crea reglas por endpoint (multi-select) |
+| `PUT` | `/mocks/:mockId` | Actualiza regla mock (global o endpoint) |
+| `POST` | `/mocks/:mockId` | Actualiza regla mock (fallback formulario HTML) |
+| `DELETE` | `/mocks/:mockId` | Elimina regla mock |
+| `POST` | `/mocks/:mockId/toggle` | Activa/desactiva regla mock |
 
 #### Enviador
 
@@ -540,6 +609,25 @@ Emitido al crear, actualizar, eliminar o limpiar un endpoint.
 
 Acciones posibles: `created`, `updated`, `deleted`, `cleared`.
 
+### `mock_changed`
+Emitido al crear, actualizar, eliminar o activar/desactivar una Mock Rule.
+
+```json
+{
+  "type": "mock_changed",
+  "data": {
+    "action": "updated",
+    "id": 12,
+    "scope": "global",
+    "endpoint_id": null,
+    "slug": null,
+    "is_active": true
+  }
+}
+```
+
+Acciones posibles: `created`, `updated`, `deleted`, `toggled`.
+
 ---
 
 ## Estructura del Proyecto
@@ -556,6 +644,7 @@ inspector/
 │   │   └── config.go           # Carga y estructura de config.yaml
 │   ├── models/
 │   │   ├── endpoint.go         # Modelo Endpoint (GORM)
+│   │   ├── mock_rule.go        # Modelo MockRule (scope, exclusiones, prioridad, matchers)
 │   │   ├── request_log.go      # Modelo RequestLog (GORM)
 │   │   └── sent_request.go     # Modelo SentRequest (GORM)
 │   ├── storage/
@@ -569,6 +658,8 @@ inspector/
 │       ├── receiver.go         # Recepción HTTP y WebSocket entrante
 │       ├── dashboard.go        # Dashboard, listado y detalle de peticiones
 │       ├── endpoints.go        # CRUD de endpoints
+│       ├── mocks.go            # CRUD/toggle de Mock Rules (endpoint + global)
+│       ├── mock_matcher.go     # Resolución de reglas mock y precedencia
 │       ├── sender.go           # Envío HTTP, proxy WS, historial
 │       └── sse.go              # Stream de Server-Sent Events
 │
@@ -578,6 +669,7 @@ inspector/
         ├── login.html          # Página de login
         ├── dashboard.html      # Dashboard principal
         ├── endpoints.html      # Gestión de endpoints
+        ├── mocks.html          # Gestión central de Mock Rules
         ├── requests.html       # Listado de peticiones recibidas
         ├── request_detail.html # Detalle de petición recibida
         ├── sender.html         # Formulario de envío HTTP
