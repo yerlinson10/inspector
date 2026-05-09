@@ -7,8 +7,8 @@ import (
 )
 
 func DocsPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "docs.html", gin.H{
+	c.HTML(http.StatusOK, "docs.html", withViewData(c, gin.H{
 		"ContentTemplate": "docs_content",
 		"title":           "Documentation",
-	})
+	}))
 }

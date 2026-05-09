@@ -1,6 +1,6 @@
 {{define "layout.html"}}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{if eq .lang "en"}}en{{else}}es{{end}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -223,10 +223,10 @@
 </head>
 <body class="app-bg text-gray-100 min-h-screen">
     <div class="lg:hidden sticky top-0 z-40 backdrop-blur bg-slate-900/85 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
-        <a href="/dashboard" class="text-lg font-bold tracking-wide text-emerald-300">Inspector</a>
-        <button id="menu-toggle" class="px-3 py-2 rounded border border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700 transition flex items-center gap-2" type="button" aria-label="Open menu">
+        <a href="/dashboard" class="text-lg font-bold tracking-wide text-emerald-300">{{call .t "layout.app_name"}}</a>
+        <button id="menu-toggle" class="px-3 py-2 rounded border border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700 transition flex items-center gap-2" type="button" aria-label="{{call .t "layout.menu.open"}}">
             <i data-lucide="menu" class="w-4 h-4"></i>
-            <span>Menu</span>
+            <span>{{call .t "layout.menu"}}</span>
         </button>
     </div>
 
@@ -234,28 +234,32 @@
         <aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-50 h-screen w-72 -translate-x-full lg:translate-x-0 transition-transform duration-300 bg-slate-950/95 border-r border-slate-700 lg:border-slate-800 backdrop-blur">
             <div class="h-full flex flex-col p-5">
                 <div class="mb-6">
-                    <a href="/dashboard" class="block text-2xl font-bold tracking-tight text-emerald-300">Inspector</a>
-                    <p class="text-sm text-slate-400 mt-1">Webhook and request dashboard</p>
+                    <a href="/dashboard" class="block text-2xl font-bold tracking-tight text-emerald-300">{{call .t "layout.app_name"}}</a>
+                    <p class="text-sm text-slate-400 mt-1">{{call .t "layout.subtitle"}}</p>
                 </div>
 
-                <div class="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2">Main</div>
+                <div class="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2">{{call .t "layout.main"}}</div>
                 <nav class="space-y-1.5">
-                    <a href="/dashboard" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/dashboard"><i data-lucide="layout-dashboard" class="nav-icon"></i><span>Dashboard</span></a>
-                    <a href="/endpoints" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/endpoints"><i data-lucide="webhook" class="nav-icon"></i><span>Endpoints</span></a>
-                    <a href="/mocks" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/mocks"><i data-lucide="zap" class="nav-icon"></i><span>Mock Rules</span></a>
-                    <a href="/requests" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/requests"><i data-lucide="list-filter" class="nav-icon"></i><span>Requests</span></a>
-                    <a href="/docs" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/docs"><i data-lucide="book-open-text" class="nav-icon"></i><span>Docs</span></a>
+                    <a href="/dashboard" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/dashboard"><i data-lucide="layout-dashboard" class="nav-icon"></i><span>{{call .t "layout.nav.dashboard"}}</span></a>
+                    <a href="/endpoints" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/endpoints"><i data-lucide="webhook" class="nav-icon"></i><span>{{call .t "layout.nav.endpoints"}}</span></a>
+                    <a href="/mocks" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/mocks"><i data-lucide="zap" class="nav-icon"></i><span>{{call .t "layout.nav.mock_rules"}}</span></a>
+                    <a href="/requests" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/requests"><i data-lucide="list-filter" class="nav-icon"></i><span>{{call .t "layout.nav.requests"}}</span></a>
+                    <a href="/docs" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/docs"><i data-lucide="book-open-text" class="nav-icon"></i><span>{{call .t "layout.nav.docs"}}</span></a>
                 </nav>
 
-                <div class="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2 mt-7">Tools</div>
+                <div class="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2 mt-7">{{call .t "layout.tools"}}</div>
                 <nav class="space-y-1.5">
-                    <a href="/send" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/send"><i data-lucide="send" class="nav-icon"></i><span>Sender</span></a>
-                    <a href="/send/ws-client" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/send/ws-client"><i data-lucide="plug-zap" class="nav-icon"></i><span>WS Client</span></a>
-                    <a href="/send/history" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/send/history"><i data-lucide="history" class="nav-icon"></i><span>History</span></a>
+                    <a href="/send" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/send"><i data-lucide="send" class="nav-icon"></i><span>{{call .t "layout.nav.sender"}}</span></a>
+                    <a href="/send/ws-client" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/send/ws-client"><i data-lucide="plug-zap" class="nav-icon"></i><span>{{call .t "layout.nav.ws_client"}}</span></a>
+                    <a href="/send/history" class="nav-link flex items-center gap-2 rounded-lg px-3 py-2.5" data-nav="/send/history"><i data-lucide="history" class="nav-icon"></i><span>{{call .t "layout.nav.history"}}</span></a>
                 </nav>
 
                 <div class="mt-auto pt-6">
-                    <a href="/logout" class="flex items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-red-300 hover:bg-red-500/20 transition"><i data-lucide="log-out" class="w-4 h-4"></i><span>Logout</span></a>
+                    <div class="mb-3 flex items-center justify-center gap-2 text-xs font-semibold tracking-wide text-slate-300">
+                        <a href="{{.langSwitchURLES}}" class="px-2 py-1 rounded border {{if eq .lang "es"}}border-emerald-500/60 bg-emerald-500/20 text-emerald-200{{else}}border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700{{end}}">{{call .t "layout.lang.es"}}</a>
+                        <a href="{{.langSwitchURLEN}}" class="px-2 py-1 rounded border {{if eq .lang "en"}}border-emerald-500/60 bg-emerald-500/20 text-emerald-200{{else}}border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700{{end}}">{{call .t "layout.lang.en"}}</a>
+                    </div>
+                    <a href="/logout" class="flex items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-red-300 hover:bg-red-500/20 transition"><i data-lucide="log-out" class="w-4 h-4"></i><span>{{call .t "layout.logout"}}</span></a>
                 </div>
             </div>
         </aside>
@@ -278,11 +282,11 @@
 
     <div id="app-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 app-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="app-modal-title" aria-describedby="app-modal-message">
         <div class="app-modal-panel w-full max-w-md rounded-2xl p-5 md:p-6">
-            <h2 id="app-modal-title" class="text-lg font-semibold text-emerald-300">Aviso</h2>
+            <h2 id="app-modal-title" class="text-lg font-semibold text-emerald-300">{{call .t "layout.modal.title"}}</h2>
             <p id="app-modal-message" class="mt-3 text-sm text-slate-200 whitespace-pre-wrap"></p>
             <div class="mt-6 flex items-center justify-end gap-2">
-                <button id="app-modal-cancel" type="button" class="hidden px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700 transition">Cancelar</button>
-                <button id="app-modal-ok" type="button" class="px-3 py-2 rounded-lg border border-emerald-500/50 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 transition">Aceptar</button>
+                <button id="app-modal-cancel" type="button" class="hidden px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700 transition">{{call .t "common.cancel"}}</button>
+                <button id="app-modal-ok" type="button" class="px-3 py-2 rounded-lg border border-emerald-500/50 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 transition">{{call .t "common.accept"}}</button>
             </div>
         </div>
     </div>
@@ -295,6 +299,9 @@
             const modalMessage = document.getElementById('app-modal-message');
             const okButton = document.getElementById('app-modal-ok');
             const cancelButton = document.getElementById('app-modal-cancel');
+            const modalDefaultTitle = '{{call .t "layout.modal.title"}}';
+            const modalAcceptText = '{{call .t "common.accept"}}';
+            const modalConfirmText = '{{call .t "common.confirm"}}';
 
             if (!modal || !modalTitle || !modalMessage || !okButton || !cancelButton) {
                 window.appAlert = function (message, title) {
@@ -337,7 +344,7 @@
             }
 
             function openModal(options) {
-                const title = options.title || 'Aviso';
+                const title = options.title || modalDefaultTitle;
                 const message = options.message || '';
                 const isConfirm = options.isConfirm === true;
                 const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
@@ -351,7 +358,7 @@
                 modalTitle.textContent = title;
                 modalMessage.textContent = message;
                 cancelButton.classList.toggle('hidden', !isConfirm);
-                okButton.textContent = isConfirm ? 'Confirmar' : 'Aceptar';
+                okButton.textContent = isConfirm ? modalConfirmText : modalAcceptText;
 
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
@@ -409,6 +416,43 @@
 
         (function () {
             if (window.jsonEditorTools) return;
+
+            const jsonI18n = {
+                readOnly: '{{call .t "layout.json.read_only"}}',
+                actionValidate: '{{call .t "layout.json.action.validate"}}',
+                actionFix: '{{call .t "layout.json.action.fix"}}',
+                actionExample: '{{call .t "layout.json.action.example"}}',
+                actionCopy: '{{call .t "layout.json.action.copy"}}',
+                actionExpand: '{{call .t "layout.json.action.expand"}}',
+                actionCollapse: '{{call .t "layout.json.action.collapse"}}',
+                emptySuffix: '{{call .t "layout.json.suffix.empty"}}',
+                invalidJSONSuffix: '{{call .t "layout.json.suffix.invalid_json"}}',
+                invalidObjectSuffix: '{{call .t "layout.json.suffix.invalid_object"}}',
+                invalidStringValuesOrArraysSuffix: '{{call .t "layout.json.suffix.invalid_string_values_or_arrays"}}',
+                invalidStringValuesOnlySuffix: '{{call .t "layout.json.suffix.invalid_string_values_only"}}',
+                invalidJSON: '{{call .t "layout.json.message.invalid"}}',
+                fixFailed: '{{call .t "layout.json.message.fix_failed"}}',
+                jsonToolsInactivePrefix: '{{call .t "layout.json.message.tools_inactive_prefix"}}',
+                modeMustBeConnector: '{{call .t "layout.json.message.mode_must_be_connector"}}',
+                modeInactive: '{{call .t "layout.json.message.mode_inactive"}}',
+                validationTitle: '{{call .t "layout.json.modal.validation"}}',
+                valid: '{{call .t "layout.json.message.valid"}}',
+                fixed: '{{call .t "layout.json.message.fixed"}}',
+                fixTitle: '{{call .t "layout.json.modal.fix"}}',
+                noExample: '{{call .t "layout.json.message.no_example"}}',
+                exampleReplaceConfirm: '{{call .t "layout.json.message.example_replace_confirm"}}',
+                exampleTitle: '{{call .t "layout.json.modal.example"}}',
+                keepCurrent: '{{call .t "layout.json.message.keep_current"}}',
+                exampleInserted: '{{call .t "layout.json.message.example_inserted"}}',
+                copyUnsupported: '{{call .t "layout.json.message.copy_unsupported"}}',
+                copyTitle: '{{call .t "layout.json.modal.copy"}}',
+                copySuccess: '{{call .t "layout.json.message.copy_success"}}',
+                copyFailed: '{{call .t "layout.json.message.copy_failed"}}',
+                editorExpanded: '{{call .t "layout.json.message.editor_expanded"}}',
+                editorCollapsed: '{{call .t "layout.json.message.editor_collapsed"}}',
+                invalidField: '{{call .t "layout.json.message.invalid_field"}}',
+                readonlyField: '{{call .t "layout.json.message.readonly_field"}}'
+            };
 
             const instances = new WeakMap();
             const defaultConfigByKey = {
@@ -610,21 +654,21 @@
 
             function buildValidationMessage(kind, cfg, overrides) {
                 if (kind === 'empty') {
-                    return overrides.emptyMessage || cfg.emptyMessage || (cfg.title + ' no puede estar vacio.');
+	                return overrides.emptyMessage || cfg.emptyMessage || (cfg.title + ' ' + jsonI18n.emptySuffix);
                 }
                 if (kind === 'json') {
-                    return overrides.invalidJSONMessage || cfg.invalidJSONMessage || (cfg.title + ' debe ser JSON valido.');
+	                return overrides.invalidJSONMessage || cfg.invalidJSONMessage || (cfg.title + ' ' + jsonI18n.invalidJSONSuffix);
                 }
                 if (kind === 'object') {
-                    return overrides.invalidObjectMessage || cfg.invalidObjectMessage || (cfg.title + ' debe ser un objeto JSON.');
+	                return overrides.invalidObjectMessage || cfg.invalidObjectMessage || (cfg.title + ' ' + jsonI18n.invalidObjectSuffix);
                 }
                 if (kind === 'strings') {
                     if (cfg.allowStringArrayValues) {
-                        return overrides.invalidStringValuesMessage || cfg.invalidStringValuesMessage || (cfg.title + ' debe contener valores de texto o listas de texto.');
+	                    return overrides.invalidStringValuesMessage || cfg.invalidStringValuesMessage || (cfg.title + ' ' + jsonI18n.invalidStringValuesOrArraysSuffix);
                     }
-                    return overrides.invalidStringValuesMessage || cfg.invalidStringValuesMessage || (cfg.title + ' debe contener solo valores de texto.');
+	                return overrides.invalidStringValuesMessage || cfg.invalidStringValuesMessage || (cfg.title + ' ' + jsonI18n.invalidStringValuesOnlySuffix);
                 }
-                return 'JSON invalido.';
+	            return jsonI18n.invalidJSON;
             }
 
             function validateParsedValue(parsed, cfg, overrides, field) {
@@ -1014,7 +1058,7 @@
 
                 return {
                     ok: false,
-                    message: 'No se pudo corregir automaticamente el JSON. Aun hay errores estructurales.',
+                    message: jsonI18n.fixFailed,
                     field: field
                 };
             }
@@ -1049,7 +1093,7 @@
                         setStatus(
                             instance,
                             'status-warn',
-                            'Utilidades JSON inactivas: ' + cfg.modeField + ' debe ser "' + (cfg.modeValue || 'json') + '".'
+                            jsonI18n.jsonToolsInactivePrefix + cfg.modeField + ' ' + jsonI18n.modeMustBeConnector + ' "' + (cfg.modeValue || 'json') + '".'
                         );
                     }
                 }
@@ -1081,7 +1125,7 @@
                 if (isReadOnly) {
                     const readOnlyBadge = document.createElement('span');
                     readOnlyBadge.className = 'json-editor-badge json-editor-badge-readonly';
-                    readOnlyBadge.textContent = 'Solo lectura';
+                    readOnlyBadge.textContent = jsonI18n.readOnly;
                     meta.appendChild(readOnlyBadge);
                 }
 
@@ -1094,15 +1138,15 @@
                 if (showActionButtons) {
                     validateButton = document.createElement('button');
                     validateButton.type = 'button';
-                    validateButton.textContent = 'Validar';
+                    validateButton.textContent = jsonI18n.actionValidate;
 
                     fixButton = document.createElement('button');
                     fixButton.type = 'button';
-                    fixButton.textContent = 'Corregir';
+                    fixButton.textContent = jsonI18n.actionFix;
 
                     exampleButton = document.createElement('button');
                     exampleButton.type = 'button';
-                    exampleButton.textContent = 'Ejemplo';
+                    exampleButton.textContent = jsonI18n.actionExample;
 
                     actions.appendChild(validateButton);
                     actions.appendChild(fixButton);
@@ -1113,7 +1157,7 @@
                 if (cfg.showCopyButton !== false) {
                     copyButton = document.createElement('button');
                     copyButton.type = 'button';
-                    copyButton.textContent = 'Copiar';
+                    copyButton.textContent = jsonI18n.actionCopy;
                     actions.appendChild(copyButton);
                 }
 
@@ -1121,7 +1165,7 @@
                 if (cfg.showExpandButton !== false) {
                     expandButton = document.createElement('button');
                     expandButton.type = 'button';
-                    expandButton.textContent = 'Expandir';
+                    expandButton.textContent = jsonI18n.actionExpand;
                     actions.appendChild(expandButton);
                 }
 
@@ -1232,67 +1276,67 @@
                     validateButton.addEventListener('click', async function () {
                         const result = currentValidation();
                         if (result.inactive) {
-                            setStatus(instance, 'status-warn', 'Modo JSON inactivo para este campo.');
+                            setStatus(instance, 'status-warn', jsonI18n.modeInactive);
                             return;
                         }
                         if (!result.ok) {
-                            setStatus(instance, 'status-error', result.message || 'JSON invalido.');
+                            setStatus(instance, 'status-error', result.message || jsonI18n.invalidJSON);
                             if (window.appAlert) {
-                                await window.appAlert(result.message || 'JSON invalido.', 'Validacion');
+                                await window.appAlert(result.message || jsonI18n.invalidJSON, jsonI18n.validationTitle);
                             }
                             focusEditor(field);
                             return;
                         }
-                        setStatus(instance, 'status-success', 'JSON valido.');
+                        setStatus(instance, 'status-success', jsonI18n.valid);
                     });
                 }
 
                 if (fixButton) {
                     fixButton.addEventListener('click', async function () {
                         if (!isModeActive(field, cfg)) {
-                            setStatus(instance, 'status-warn', 'Modo JSON inactivo para este campo.');
+                            setStatus(instance, 'status-warn', jsonI18n.modeInactive);
                             return;
                         }
                         const fixed = autocorrectText(getEditorValue(field), cfg, {}, field);
                         if (!fixed.ok) {
-                            setStatus(instance, 'status-error', fixed.message || 'No se pudo corregir el JSON.');
+                            setStatus(instance, 'status-error', fixed.message || jsonI18n.fixFailed);
                             if (window.appAlert) {
-                                await window.appAlert(fixed.message || 'No se pudo corregir el JSON.', 'Corregir JSON');
+                                await window.appAlert(fixed.message || jsonI18n.fixFailed, jsonI18n.fixTitle);
                             }
                             focusEditor(field);
                             return;
                         }
                         setEditorValue(field, fixed.text || '');
-                        setStatus(instance, 'status-success', 'JSON corregido y formateado.');
+                        setStatus(instance, 'status-success', jsonI18n.fixed);
                     });
                 }
 
                 if (exampleButton) {
                     exampleButton.addEventListener('click', async function () {
                         if (!isModeActive(field, cfg)) {
-                            setStatus(instance, 'status-warn', 'Modo JSON inactivo para este campo.');
+                            setStatus(instance, 'status-warn', jsonI18n.modeInactive);
                             return;
                         }
 
                         const example = normalizeExample(cfg.example);
                         if (!example) {
-                            setStatus(instance, 'status-warn', 'No hay ejemplo configurado para este campo.');
+                            setStatus(instance, 'status-warn', jsonI18n.noExample);
                             return;
                         }
 
                         const current = getEditorValue(field).trim();
                         if (current) {
                             const proceed = window.appConfirm
-                                ? await window.appConfirm('Este campo ya tiene contenido. ¿Deseas reemplazarlo por un ejemplo JSON?', 'Ejemplo JSON')
+                                ? await window.appConfirm(jsonI18n.exampleReplaceConfirm, jsonI18n.exampleTitle)
                                 : false;
                             if (!proceed) {
-                                setStatus(instance, 'status-idle', 'Se mantuvo el contenido actual.');
+                                setStatus(instance, 'status-idle', jsonI18n.keepCurrent);
                                 return;
                             }
                         }
 
                         setEditorValue(field, example);
-                        setStatus(instance, 'status-success', 'Ejemplo JSON insertado.');
+                        setStatus(instance, 'status-success', jsonI18n.exampleInserted);
                     });
                 }
 
@@ -1301,18 +1345,18 @@
                         const payload = getEditorValue(field);
                         if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
                             if (window.appAlert) {
-                                await window.appAlert('El navegador no permite copiar automaticamente.', 'Copiar');
+                                await window.appAlert(jsonI18n.copyUnsupported, jsonI18n.copyTitle);
                             }
                             return;
                         }
 
                         try {
                             await navigator.clipboard.writeText(payload);
-                            setStatus(instance, 'status-success', 'Contenido copiado al portapapeles.');
+                            setStatus(instance, 'status-success', jsonI18n.copySuccess);
                         } catch (_) {
-                            setStatus(instance, 'status-error', 'No se pudo copiar el contenido.');
+                            setStatus(instance, 'status-error', jsonI18n.copyFailed);
                             if (window.appAlert) {
-                                await window.appAlert('No se pudo copiar el contenido.', 'Copiar');
+                                await window.appAlert(jsonI18n.copyFailed, jsonI18n.copyTitle);
                             }
                         }
                     });
@@ -1322,8 +1366,8 @@
                     expandButton.addEventListener('click', function() {
                         expanded = !expanded;
                         setEditorHeight(expanded ? expandedHeight : baseHeight);
-                        expandButton.textContent = expanded ? 'Contraer' : 'Expandir';
-                        setStatus(instance, 'status-idle', expanded ? 'Editor expandido.' : 'Editor contraido.');
+                        expandButton.textContent = expanded ? jsonI18n.actionCollapse : jsonI18n.actionExpand;
+                        setStatus(instance, 'status-idle', expanded ? jsonI18n.editorExpanded : jsonI18n.editorCollapsed);
                     });
                 }
 
@@ -1350,10 +1394,10 @@
             }
 
             function autocorrectField(field, overrides) {
-                if (!(field instanceof HTMLTextAreaElement)) return { ok: false, message: 'Campo invalido.' };
+                if (!(field instanceof HTMLTextAreaElement)) return { ok: false, message: jsonI18n.invalidField };
                 const cfg = mergeConfig(field, overrides || {});
                 if (cfg.readOnly) {
-                    return { ok: false, message: 'Campo en modo solo lectura.', readOnly: true, field: field };
+                    return { ok: false, message: jsonI18n.readonlyField, readOnly: true, field: field };
                 }
                 if (!isModeActive(field, cfg)) {
                     return { ok: true, inactive: true, field: field };

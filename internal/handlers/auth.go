@@ -46,10 +46,10 @@ func NewAuthHandler(username, password string, sessionTTL time.Duration) *AuthHa
 
 func (h *AuthHandler) ShowLogin(c *gin.Context) {
 	next := sanitizeNextPath(c.DefaultQuery("next", "/dashboard"))
-	c.HTML(http.StatusOK, "login.html", gin.H{
+	c.HTML(http.StatusOK, "login.html", withViewData(c, gin.H{
 		"title": "Login",
 		"next":  next,
-	})
+	}))
 }
 
 func (h *AuthHandler) HandleLogin(c *gin.Context) {
@@ -65,21 +65,21 @@ func (h *AuthHandler) HandleLogin(c *gin.Context) {
 			retrySeconds = 1
 		}
 		c.Header("Retry-After", strconv.Itoa(retrySeconds))
-		c.HTML(http.StatusTooManyRequests, "login.html", gin.H{
+		c.HTML(http.StatusTooManyRequests, "login.html", withViewData(c, gin.H{
 			"title": "Login",
 			"next":  next,
-			"error": "Demasiados intentos fallidos. Intenta de nuevo en " + strconv.Itoa(retrySeconds) + "s",
-		})
+			"error": "Too many failed attempts. Try again in " + strconv.Itoa(retrySeconds) + "s",
+		}))
 		return
 	}
 
 	if !constantTimeEquals(username, h.Username) || !constantTimeEquals(password, h.Password) {
 		h.recordFailedLogin(clientKey, now)
-		c.HTML(http.StatusUnauthorized, "login.html", gin.H{
+		c.HTML(http.StatusUnauthorized, "login.html", withViewData(c, gin.H{
 			"title": "Login",
 			"next":  next,
-			"error": "Credenciales invalidas",
-		})
+			"error": "Invalid credentials",
+		}))
 		return
 	}
 	h.clearFailedLogin(clientKey)

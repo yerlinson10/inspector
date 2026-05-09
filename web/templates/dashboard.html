@@ -2,7 +2,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Endpoints -->
     <div class="lg:col-span-2">
-        <h2 class="text-2xl font-bold mb-4">Endpoints</h2>
+        <h2 class="text-2xl font-bold mb-4">{{call .t "dashboard.endpoints.title"}}</h2>
         {{if .endpoints}}
         <div class="grid gap-3">
             {{range .endpoints}}
@@ -13,13 +13,13 @@
                         <p class="text-gray-400 text-sm">{{.Description}}</p>
                         <div class="mt-2 flex gap-2 items-center">
                             <code class="bg-gray-900 px-2 py-1 rounded text-emerald-400 text-sm">/in/{{.Slug}}</code>
-                            <button onclick="copyToClipboard(window.location.origin + '/in/{{.Slug}}')" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">Copy URL</button>
+                            <button onclick="copyToClipboard(window.location.origin + '/in/{{.Slug}}')" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">{{call $.t "dashboard.action.copy_url"}}</button>
                             <code class="bg-gray-900 px-2 py-1 rounded text-blue-400 text-sm">{{$.publicWSBaseURL}}/in/{{.Slug}}/ws</code>
                         </div>
                     </div>
                     <div class="text-right text-sm text-gray-400">
-                        <div>{{.TotalRequests}} requests</div>
-                        {{if .LastRequest}}<div>Last: {{.LastRequest.Format "2006-01-02 15:04"}}</div>{{end}}
+                        <div>{{.TotalRequests}} {{call $.t "dashboard.endpoints.requests_suffix"}}</div>
+                        {{if .LastRequest}}<div>{{call $.t "dashboard.endpoints.last"}}: {{.LastRequest.Format "2006-01-02 15:04"}}</div>{{end}}
                     </div>
                 </div>
             </div>
@@ -27,14 +27,14 @@
         </div>
         {{else}}
         <div class="bg-gray-800 rounded-lg p-8 text-center border border-gray-700">
-            <p class="text-gray-400">No endpoints yet. <a href="/endpoints" class="text-emerald-400 hover:underline">Create one</a></p>
+            <p class="text-gray-400">{{call .t "dashboard.endpoints.empty"}} <a href="/endpoints" class="text-emerald-400 hover:underline">{{call .t "dashboard.endpoints.create_one"}}</a></p>
         </div>
         {{end}}
     </div>
 
     <!-- Live Feed -->
     <div>
-        <h2 class="text-2xl font-bold mb-4">Live Feed</h2>
+        <h2 class="text-2xl font-bold mb-4">{{call .t "dashboard.live_feed.title"}}</h2>
         <div id="live-feed" class="space-y-2 max-h-[600px] overflow-y-auto">
             {{range .recentRequests}}
             <div class="bg-gray-800 rounded p-3 border border-gray-700 text-sm">

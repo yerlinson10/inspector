@@ -1,30 +1,35 @@
 {{define "login.html"}}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{if eq .lang "en"}}en{{else}}es{{end}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inspector - Login</title>
+    <title>{{call .t "layout.app_name"}} - {{call .t "login.title"}}</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="fixed top-4 right-4 z-20 flex items-center gap-2 text-xs font-semibold tracking-wide text-slate-300">
+        <a href="{{.langSwitchURLES}}" class="px-2 py-1 rounded border {{if eq .lang "es"}}border-emerald-500/60 bg-emerald-500/20 text-emerald-200{{else}}border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700{{end}}">{{call .t "layout.lang.es"}}</a>
+        <a href="{{.langSwitchURLEN}}" class="px-2 py-1 rounded border {{if eq .lang "en"}}border-emerald-500/60 bg-emerald-500/20 text-emerald-200{{else}}border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700{{end}}">{{call .t "layout.lang.en"}}</a>
+    </div>
+
     <div class="min-h-screen grid lg:grid-cols-2">
         <section class="hidden lg:flex items-center justify-center bg-gradient-to-br from-emerald-900 via-cyan-900 to-slate-900 p-12">
             <div class="max-w-md">
-                <h1 class="text-5xl font-black tracking-tight">Inspector</h1>
-                <p class="mt-4 text-slate-200/90">Centro de pruebas para recibir y enviar HTTP, Webhook y WebSocket.</p>
+                <h1 class="text-5xl font-black tracking-tight">{{call .t "layout.app_name"}}</h1>
+                <p class="mt-4 text-slate-200/90">{{call .t "login.hero.subtitle"}}</p>
                 <div class="mt-8 space-y-2 text-sm text-slate-200/80">
-                    <p>Endpoints dinamicos por proyecto</p>
-                    <p>Dashboard con logs en tiempo real</p>
-                    <p>Cliente saliente HTTP y WebSocket</p>
+                    <p>{{call .t "login.hero.item1"}}</p>
+                    <p>{{call .t "login.hero.item2"}}</p>
+                    <p>{{call .t "login.hero.item3"}}</p>
                 </div>
             </div>
         </section>
 
         <section class="flex items-center justify-center p-6">
             <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-7 shadow-2xl">
-                <h2 class="text-2xl font-bold">Iniciar sesion</h2>
-                <p class="text-slate-400 text-sm mt-1">Accede al dashboard de Inspector</p>
+                <h2 class="text-2xl font-bold">{{call .t "login.heading"}}</h2>
+                <p class="text-slate-400 text-sm mt-1">{{call .t "login.subheading"}}</p>
 
                 {{if .error}}
                 <div class="mt-4 bg-red-950/60 border border-red-700 text-red-200 rounded-lg px-3 py-2 text-sm">{{.error}}</div>
@@ -33,14 +38,14 @@
                 <form method="POST" action="/login" class="mt-6 space-y-4">
                     <input type="hidden" name="next" value="{{.next}}">
                     <div>
-                        <label class="block text-sm text-slate-300 mb-1">Usuario</label>
+                        <label class="block text-sm text-slate-300 mb-1">{{call .t "login.label.username"}}</label>
                         <input type="text" name="username" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="admin">
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-300 mb-1">Password</label>
+                        <label class="block text-sm text-slate-300 mb-1">{{call .t "login.label.password"}}</label>
                         <input type="password" name="password" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="********">
                     </div>
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2.5 font-semibold transition">Entrar</button>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2.5 font-semibold transition">{{call .t "login.action.submit"}}</button>
                 </form>
             </div>
         </section>

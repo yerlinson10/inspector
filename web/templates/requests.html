@@ -1,53 +1,53 @@
 {{define "content"}}
 <div class="flex justify-between items-center mb-6 gap-3 flex-wrap">
-    <h2 class="text-2xl font-bold">Requests</h2>
-    <span id="requests-total" class="text-gray-400">{{.total}} total</span>
+    <h2 class="text-2xl font-bold">{{call .t "requests.title"}}</h2>
+    <span id="requests-total" class="text-gray-400">{{.total}} {{call .t "requests.total_suffix"}}</span>
 </div>
 
 <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 mb-6">
     <form method="GET" action="/requests" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 items-end">
         <div>
-            <label class="block text-sm text-gray-400 mb-1">Type</label>
+            <label class="block text-sm text-gray-400 mb-1">{{call .t "requests.filter.type"}}</label>
             <select name="type" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
-                <option value="">All</option>
+                <option value="">{{call .t "requests.all"}}</option>
                 <option value="http" {{if eq .currentType "http"}}selected{{end}}>HTTP</option>
                 <option value="webhook" {{if eq .currentType "webhook"}}selected{{end}}>Webhook</option>
                 <option value="websocket" {{if eq .currentType "websocket"}}selected{{end}}>WebSocket</option>
             </select>
         </div>
         <div>
-            <label class="block text-sm text-gray-400 mb-1">Endpoint</label>
+            <label class="block text-sm text-gray-400 mb-1">{{call .t "requests.filter.endpoint"}}</label>
             <select name="endpoint" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
-                <option value="">All</option>
+                <option value="">{{call .t "requests.all"}}</option>
                 {{range .endpoints}}
                 <option value="{{.Slug}}" {{if eq $.currentSlug .Slug}}selected{{end}}>{{.Name}}</option>
                 {{end}}
             </select>
         </div>
         <div>
-            <label class="block text-sm text-gray-400 mb-1">Method</label>
+            <label class="block text-sm text-gray-400 mb-1">{{call .t "requests.filter.method"}}</label>
             <select name="method" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
-                <option value="">All</option>
+                <option value="">{{call .t "requests.all"}}</option>
                 {{range .methodOptions}}
                 <option value="{{.}}" {{if eq $.currentMethod .}}selected{{end}}>{{.}}</option>
                 {{end}}
             </select>
         </div>
         <div>
-            <label class="block text-sm text-gray-400 mb-1">Search</label>
-            <input type="text" name="q" value="{{.currentQuery}}" placeholder="endpoint, path, ip..." class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
+            <label class="block text-sm text-gray-400 mb-1">{{call .t "requests.filter.search"}}</label>
+            <input type="text" name="q" value="{{.currentQuery}}" placeholder="{{call .t "requests.filter.search_placeholder"}}" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
         </div>
         <div>
-            <label class="block text-sm text-gray-400 mb-1">From</label>
+            <label class="block text-sm text-gray-400 mb-1">{{call .t "requests.filter.from"}}</label>
             <input type="datetime-local" name="from" value="{{.currentFrom}}" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
         </div>
         <div>
-            <label class="block text-sm text-gray-400 mb-1">To</label>
+            <label class="block text-sm text-gray-400 mb-1">{{call .t "requests.filter.to"}}</label>
             <input type="datetime-local" name="to" value="{{.currentTo}}" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
         </div>
         <div class="xl:col-span-6 flex gap-2">
-            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded font-medium transition">Filter</button>
-            <a href="/requests" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-medium transition">Reset</a>
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded font-medium transition">{{call .t "requests.filter.apply"}}</button>
+            <a href="/requests" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-medium transition">{{call .t "requests.filter.reset"}}</a>
         </div>
     </form>
 </div>
@@ -57,13 +57,13 @@
         <thead class="bg-gray-800 text-gray-400">
             <tr>
                 <th class="px-4 py-3 text-left">#</th>
-                <th class="px-4 py-3 text-left">Type</th>
-                <th class="px-4 py-3 text-left">Method</th>
-                <th class="px-4 py-3 text-left">Endpoint</th>
-                <th class="px-4 py-3 text-left">Path</th>
-                <th class="px-4 py-3 text-left">IP</th>
-                <th class="px-4 py-3 text-left">Size</th>
-                <th class="px-4 py-3 text-left">Time</th>
+                <th class="px-4 py-3 text-left">{{call .t "requests.table.type"}}</th>
+                <th class="px-4 py-3 text-left">{{call .t "requests.table.method"}}</th>
+                <th class="px-4 py-3 text-left">{{call .t "requests.table.endpoint"}}</th>
+                <th class="px-4 py-3 text-left">{{call .t "requests.table.path"}}</th>
+                <th class="px-4 py-3 text-left">{{call .t "requests.table.ip"}}</th>
+                <th class="px-4 py-3 text-left">{{call .t "requests.table.size"}}</th>
+                <th class="px-4 py-3 text-left">{{call .t "requests.table.time"}}</th>
                 <th class="px-4 py-3 text-left"></th>
             </tr>
         </thead>
@@ -82,15 +82,15 @@
                 <td class="px-4 py-3 text-gray-400">{{.SizeBytes}}B</td>
                 <td class="px-4 py-3 text-gray-400">{{.CreatedAt.Format "01-02 15:04:05"}}</td>
                 <td class="px-4 py-3 whitespace-nowrap">
-                    <a href="/requests/{{.ID}}" class="text-emerald-400 hover:underline">Detail</a>
+                    <a href="/requests/{{.ID}}" class="text-emerald-400 hover:underline">{{call $.t "requests.action.detail"}}</a>
                     <span class="text-gray-600 mx-1">|</span>
-                    <a href="/requests/diff?left={{.ID}}&endpoint={{.EndpointSlug}}" class="text-blue-400 hover:underline">Diff</a>
+                    <a href="/requests/diff?left={{.ID}}&endpoint={{.EndpointSlug}}" class="text-blue-400 hover:underline">{{call $.t "requests.action.diff"}}</a>
                 </td>
             </tr>
             {{end}}
             {{else}}
             <tr id="requests-empty-row">
-                <td colspan="9" class="px-4 py-8 text-center text-gray-400">No requests captured yet.</td>
+                <td colspan="9" class="px-4 py-8 text-center text-gray-400">{{call .t "requests.empty"}}</td>
             </tr>
             {{end}}
         </tbody>
@@ -100,17 +100,21 @@
 {{if gt .totalPages 1}}
 <div class="flex justify-center gap-2 mt-6">
     {{if gt .page 1}}
-    <a href="/requests?page={{subtract .page 1}}{{if .filterQuery}}&{{.filterQuery}}{{end}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">← Prev</a>
+    <a href="/requests?page={{subtract .page 1}}{{if .filterQuery}}&{{.filterQuery}}{{end}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">← {{call .t "requests.pagination.prev"}}</a>
     {{end}}
-    <span class="px-3 py-1 text-gray-400">Page {{.page}} of {{.totalPages}}</span>
+    <span class="px-3 py-1 text-gray-400">{{call .t "requests.pagination.page"}} {{.page}} {{call .t "requests.pagination.of"}} {{.totalPages}}</span>
     {{if lt .page .totalPages}}
-    <a href="/requests?page={{add .page 1}}{{if .filterQuery}}&{{.filterQuery}}{{end}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">Next →</a>
+    <a href="/requests?page={{add .page 1}}{{if .filterQuery}}&{{.filterQuery}}{{end}}" class="bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">{{call .t "requests.pagination.next"}} →</a>
     {{end}}
 </div>
 {{end}}
 
 <script>
 (() => {
+    const tTotalSuffix = '{{call .t "requests.total_suffix"}}';
+    const tDetail = '{{call .t "requests.action.detail"}}';
+    const tDiff = '{{call .t "requests.action.diff"}}';
+
     const currentType = '{{.currentType}}';
     const currentSlug = '{{.currentSlug}}';
     const currentMethod = '{{.currentMethod}}';
@@ -157,7 +161,7 @@
     function incTotal() {
         if (!totalEl) return;
         const n = parseInt(totalEl.textContent, 10);
-        if (!Number.isNaN(n)) totalEl.textContent = (n + 1) + ' total';
+        if (!Number.isNaN(n)) totalEl.textContent = (n + 1) + ' ' + tTotalSuffix;
     }
 
     function addRow(req) {
@@ -218,14 +222,14 @@
         tdActions.className = 'px-4 py-3 whitespace-nowrap';
         const detailLink = document.createElement('a');
         detailLink.className = 'text-emerald-400 hover:underline';
-        detailLink.textContent = 'Detail';
+        detailLink.textContent = tDetail;
         detailLink.href = '/requests/' + encodeURIComponent(safeText(req.id));
         const sep = document.createElement('span');
         sep.className = 'text-gray-600 mx-1';
         sep.textContent = '|';
         const diffLink = document.createElement('a');
         diffLink.className = 'text-blue-400 hover:underline';
-        diffLink.textContent = 'Diff';
+        diffLink.textContent = tDiff;
         diffLink.href = '/requests/diff?left=' + encodeURIComponent(safeText(req.id)) + '&endpoint=' + encodeURIComponent(safeText(req.endpoint_slug));
         tdActions.appendChild(detailLink);
         tdActions.appendChild(sep);

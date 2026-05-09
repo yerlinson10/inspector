@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="flex flex-col gap-2 mb-6">
     <h2 class="text-2xl font-bold">Mock Rules</h2>
-    <p class="text-sm text-gray-400">Configura reglas globales para todos los endpoints o reglas especificas para endpoints concretos.</p>
+    <p class="text-sm text-gray-400">Configure global rules for all endpoints or specific rules for concrete endpoints.</p>
 </div>
 
 {{if .success}}
@@ -10,8 +10,8 @@
 
 <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h3 class="text-lg font-semibold">Nueva Regla</h3>
-        <span class="text-xs text-gray-500">Menor prioridad numerica = se evalua primero</span>
+        <h3 class="text-lg font-semibold">New Rule</h3>
+        <span class="text-xs text-gray-500">Lower numeric priority = evaluated first</span>
     </div>
 
     <form method="POST" action="/mocks" class="space-y-4" id="mock-create-form">
@@ -19,21 +19,21 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-                <label class="block text-sm text-gray-400 mb-1">Alcance</label>
+                <label class="block text-sm text-gray-400 mb-1">Scope</label>
                 <select name="scope" id="scope-select" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
-                    <option value="endpoint" selected>Especifico por endpoint</option>
-                    <option value="global">Global (todos los endpoints)</option>
+                    <option value="endpoint" selected>Endpoint specific</option>
+                    <option value="global">Global (all endpoints)</option>
                 </select>
             </div>
             <div id="endpoint-select-wrap" class="md:col-span-2">
                 <label class="block text-sm text-gray-400 mb-1">Endpoints (multi-select)</label>
                 <div id="endpoint-multiselect" class="relative">
                     <button type="button" id="endpoint-multiselect-trigger" class="w-full min-h-10 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-left text-sm text-gray-100 focus:border-emerald-400 focus:outline-none transition disabled:cursor-not-allowed disabled:opacity-60" aria-haspopup="listbox" aria-expanded="false" aria-controls="endpoint-multiselect-panel">
-                        <span id="endpoint-multiselect-value">Selecciona uno o varios endpoints</span>
+                        <span id="endpoint-multiselect-value">Select one or more endpoints</span>
                     </button>
                     <div id="endpoint-multiselect-panel" class="hidden absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-2xl" role="listbox" aria-multiselectable="true">
                         <div class="p-2 border-b border-gray-800">
-                            <input type="text" id="endpoint-search" placeholder="Buscar endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                            <input type="text" id="endpoint-search" placeholder="Search endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
                         </div>
                         <div id="endpoint-options" class="max-h-56 overflow-y-auto p-1">
                             {{range .endpoints}}
@@ -46,25 +46,25 @@
                             {{end}}
                         </div>
                         <div class="p-2 border-t border-gray-800 flex justify-between items-center">
-                            <p id="endpoint-selected-count" class="text-xs text-gray-400">0 seleccionados</p>
-                            <button type="button" id="endpoint-clear" class="text-xs text-gray-300 hover:text-gray-100">Limpiar</button>
+                            <p id="endpoint-selected-count" class="text-xs text-gray-400">0 selected</p>
+                            <button type="button" id="endpoint-clear" class="text-xs text-gray-300 hover:text-gray-100">Clear</button>
                         </div>
                     </div>
                     <div id="endpoint-hidden-inputs"></div>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Puedes seleccionar multiples endpoints en la lista.</p>
+                <p class="text-xs text-gray-500 mt-1">You can select multiple endpoints in the list.</p>
             </div>
         </div>
 
         <div id="global-excluded-wrap" class="hidden">
-            <label class="block text-sm text-gray-400 mb-1">Excluir endpoints (solo global)</label>
+            <label class="block text-sm text-gray-400 mb-1">Exclude endpoints (global only)</label>
             <div id="global-excluded-multiselect" data-ms-root data-ms-name="excluded_endpoint_ids" class="relative">
                 <button type="button" data-ms-trigger class="w-full min-h-10 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-left text-sm text-gray-100 focus:border-emerald-400 focus:outline-none transition disabled:cursor-not-allowed disabled:opacity-60" aria-haspopup="listbox" aria-expanded="false">
-                    <span data-ms-value>Selecciona endpoints a excluir</span>
+                    <span data-ms-value>Select endpoints to exclude</span>
                 </button>
                 <div data-ms-panel class="hidden absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-2xl" role="listbox" aria-multiselectable="true">
                     <div class="p-2 border-b border-gray-800">
-                        <input type="text" data-ms-search placeholder="Buscar endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                        <input type="text" data-ms-search placeholder="Search endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
                     </div>
                     <div data-ms-options class="max-h-56 overflow-y-auto p-1">
                         {{range .endpoints}}
@@ -77,22 +77,22 @@
                         {{end}}
                     </div>
                     <div class="p-2 border-t border-gray-800 flex justify-between items-center">
-                        <p data-ms-count class="text-xs text-gray-400">0 seleccionados</p>
-                        <button type="button" data-ms-clear class="text-xs text-gray-300 hover:text-gray-100">Limpiar</button>
+                        <p data-ms-count class="text-xs text-gray-400">0 selected</p>
+                        <button type="button" data-ms-clear class="text-xs text-gray-300 hover:text-gray-100">Clear</button>
                     </div>
                 </div>
                 <div data-ms-hidden></div>
             </div>
-            <p class="text-xs text-gray-500 mt-1">Si esta regla es global, no se aplicara en endpoints seleccionados.</p>
+            <p class="text-xs text-gray-500 mt-1">If this rule is global, it will not apply to selected endpoints.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="md:col-span-2">
-                <label class="block text-sm text-gray-400 mb-1">Nombre</label>
+                <label class="block text-sm text-gray-400 mb-1">Name</label>
                 <input type="text" name="name" required minlength="3" maxlength="100" placeholder="ej: Simular timeout proveedor" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
             </div>
             <div>
-                <label class="block text-sm text-gray-400 mb-1">Metodo</label>
+                <label class="block text-sm text-gray-400 mb-1">Method</label>
                 <select name="method" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                     <option value="">ANY</option>
                     <option value="GET">GET</option>
@@ -103,13 +103,13 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm text-gray-400 mb-1">Prioridad</label>
+                <label class="block text-sm text-gray-400 mb-1">Priority</label>
                 <input type="number" name="priority" value="100" min="1" max="10000" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
             </div>
         </div>
 
         <details class="rounded border border-gray-700 bg-gray-900/40 p-4">
-            <summary class="cursor-pointer text-sm text-gray-300">Condiciones de match (opcional)</summary>
+            <summary class="cursor-pointer text-sm text-gray-300">Match conditions (optional)</summary>
             <div class="mt-3 space-y-3">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
@@ -179,7 +179,7 @@
             <div class="flex items-end">
                 <label class="inline-flex items-center gap-2 text-sm text-gray-300">
                     <input type="checkbox" name="is_active" checked class="rounded border-gray-600 bg-gray-900">
-                    Activa
+                    Active
                 </label>
             </div>
         </div>
@@ -198,7 +198,7 @@
         <div class="flex justify-end">
             <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium transition inline-flex items-center gap-2">
                 <i data-lucide="plus" class="w-4 h-4"></i>
-                Crear regla
+                Create rule
             </button>
         </div>
     </form>
@@ -206,7 +206,7 @@
 
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
     <section class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <h3 class="text-lg font-semibold mb-4 text-blue-300">Reglas Globales</h3>
+        <h3 class="text-lg font-semibold mb-4 text-blue-300">Global Rules</h3>
         {{if .globalRules}}
         <div class="space-y-3">
             {{range .globalRules}}
@@ -225,9 +225,9 @@
                         {{end}}
                     </div>
                     <div class="flex gap-2">
-                        <button type="button" onclick="toggleRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border {{if .Rule.IsActive}}border-emerald-500/40 text-emerald-300{{else}}border-gray-600 text-gray-300{{end}}">{{if .Rule.IsActive}}Activa{{else}}Inactiva{{end}}</button>
-                        <button type="button" onclick="openEditModal('rule-global-{{.Rule.ID}}')" class="px-2 py-1 text-xs rounded border border-blue-500/40 text-blue-300">Editar</button>
-                        <button type="button" onclick="deleteRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border border-red-500/40 text-red-300">Eliminar</button>
+                        <button type="button" onclick="toggleRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border {{if .Rule.IsActive}}border-emerald-500/40 text-emerald-300{{else}}border-gray-600 text-gray-300{{end}}">{{if .Rule.IsActive}}Active{{else}}Inactive{{end}}</button>
+                        <button type="button" onclick="openEditModal('rule-global-{{.Rule.ID}}')" class="px-2 py-1 text-xs rounded border border-blue-500/40 text-blue-300">Edit</button>
+                        <button type="button" onclick="deleteRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border border-red-500/40 text-red-300">Delete</button>
                     </div>
                 </div>
             </article>
@@ -238,15 +238,15 @@
                     <input type="hidden" name="scope" value="global">
 
                     <div>
-                        <label class="block text-sm text-gray-400 mb-1">Excluir endpoints (solo global)</label>
+                        <label class="block text-sm text-gray-400 mb-1">Exclude endpoints (global only)</label>
                         {{$view := .}}
                         <div data-ms-root data-ms-name="excluded_endpoint_ids" class="relative">
                             <button type="button" data-ms-trigger class="w-full min-h-10 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-left text-sm text-gray-100 focus:border-emerald-400 focus:outline-none transition">
-                                <span data-ms-value>Selecciona endpoints a excluir</span>
+                                <span data-ms-value>Select endpoints to exclude</span>
                             </button>
                             <div data-ms-panel class="hidden absolute z-20 mt-2 w-full rounded-md border border-gray-700 bg-gray-900 shadow-2xl">
                                 <div class="p-2 border-b border-gray-800">
-                                    <input type="text" data-ms-search placeholder="Buscar endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
+                                    <input type="text" data-ms-search placeholder="Search endpoint..." class="w-full bg-gray-950 border border-gray-700 rounded px-2.5 py-2 text-xs text-gray-100 focus:border-emerald-400 focus:outline-none">
                                 </div>
                                 <div data-ms-options class="max-h-56 overflow-y-auto p-1">
                                     {{range $.endpoints}}
@@ -259,22 +259,22 @@
                                     {{end}}
                                 </div>
                                 <div class="p-2 border-t border-gray-800 flex justify-between items-center">
-                                    <p data-ms-count class="text-xs text-gray-400">0 seleccionados</p>
-                                    <button type="button" data-ms-clear class="text-xs text-gray-300 hover:text-gray-100">Limpiar</button>
+                                    <p data-ms-count class="text-xs text-gray-400">0 selected</p>
+                                    <button type="button" data-ms-clear class="text-xs text-gray-300 hover:text-gray-100">Clear</button>
                                 </div>
                             </div>
                             <div data-ms-hidden></div>
                         </div>
-                        <p class="text-xs text-gray-500 mt-1">Esta regla global se ignorara para endpoints seleccionados.</p>
+                        <p class="text-xs text-gray-500 mt-1">This global rule will be ignored for selected endpoints.</p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div class="md:col-span-2">
-                            <label class="block text-sm text-gray-400 mb-1">Nombre</label>
+                            <label class="block text-sm text-gray-400 mb-1">Name</label>
                             <input type="text" name="name" value="{{.Rule.Name}}" required minlength="3" maxlength="100" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-400 mb-1">Metodo</label>
+                            <label class="block text-sm text-gray-400 mb-1">Method</label>
                             <select name="method" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                                 <option value="" {{if or (eq .Rule.Method "") (eq .Rule.Method "ANY") (eq .Rule.Method "*")}}selected{{end}}>ANY</option>
                                 <option value="GET" {{if eq .Rule.Method "GET"}}selected{{end}}>GET</option>
@@ -285,13 +285,13 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-400 mb-1">Prioridad</label>
+                            <label class="block text-sm text-gray-400 mb-1">Priority</label>
                             <input type="number" name="priority" value="{{.Rule.Priority}}" min="1" max="10000" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                         </div>
                     </div>
 
                     <details class="rounded border border-gray-700 bg-gray-900/40 p-4" open>
-                        <summary class="cursor-pointer text-sm text-gray-300">Condiciones de match (opcional)</summary>
+                        <summary class="cursor-pointer text-sm text-gray-300">Match conditions (optional)</summary>
                         <div class="mt-3 space-y-3">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div>
@@ -361,7 +361,7 @@
                         <div class="flex items-end">
                             <label class="inline-flex items-center gap-2 text-sm text-gray-300">
                                 <input type="checkbox" name="is_active" {{if .Rule.IsActive}}checked{{end}} class="rounded border-gray-600 bg-gray-900">
-                                Activa
+                                Active
                             </label>
                         </div>
                     </div>
@@ -377,19 +377,19 @@
                         </div>
                     </div>
                     <div class="flex justify-end">
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium">Guardar cambios</button>
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium">Save changes</button>
                     </div>
                 </form>
             </template>
             {{end}}
         </div>
         {{else}}
-        <p class="text-sm text-gray-500">No hay reglas globales.</p>
+        <p class="text-sm text-gray-500">No global rules.</p>
         {{end}}
     </section>
 
     <section class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <h3 class="text-lg font-semibold mb-4 text-emerald-300">Reglas por Endpoint</h3>
+        <h3 class="text-lg font-semibold mb-4 text-emerald-300">Endpoint Rules</h3>
         {{if .endpointRules}}
         <div class="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
             {{range .endpointRules}}
@@ -397,13 +397,13 @@
                 <div class="flex items-center justify-between gap-2">
                     <div>
                         <p class="text-sm font-medium text-gray-100">{{.Rule.Name}}</p>
-                        <p class="text-xs text-gray-500">{{if .EndpointName}}{{.EndpointName}}{{else}}Endpoint desconocido{{end}} {{if .EndpointSlug}}(/in/{{.EndpointSlug}}){{end}}</p>
-                        <p class="text-xs text-gray-500">#{{.Rule.ID}} · P{{.Rule.Priority}} · {{if .Rule.IsActive}}Activa{{else}}Inactiva{{end}} · Hits {{.Rule.HitCount}}</p>
+                        <p class="text-xs text-gray-500">{{if .EndpointName}}{{.EndpointName}}{{else}}Unknown endpoint{{end}} {{if .EndpointSlug}}(/in/{{.EndpointSlug}}){{end}}</p>
+                        <p class="text-xs text-gray-500">#{{.Rule.ID}} · P{{.Rule.Priority}} · {{if .Rule.IsActive}}Active{{else}}Inactive{{end}} · Hits {{.Rule.HitCount}}</p>
                     </div>
                     <div class="flex gap-2">
-                        <button type="button" onclick="toggleRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border {{if .Rule.IsActive}}border-emerald-500/40 text-emerald-300{{else}}border-gray-600 text-gray-300{{end}}">{{if .Rule.IsActive}}Activa{{else}}Inactiva{{end}}</button>
-                        <button type="button" onclick="openEditModal('rule-endpoint-{{.Rule.ID}}')" class="px-2 py-1 text-xs rounded border border-blue-500/40 text-blue-300">Ver/Editar</button>
-                        <button type="button" onclick="deleteRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border border-red-500/40 text-red-300">Eliminar</button>
+                        <button type="button" onclick="toggleRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border {{if .Rule.IsActive}}border-emerald-500/40 text-emerald-300{{else}}border-gray-600 text-gray-300{{end}}">{{if .Rule.IsActive}}Active{{else}}Inactive{{end}}</button>
+                        <button type="button" onclick="openEditModal('rule-endpoint-{{.Rule.ID}}')" class="px-2 py-1 text-xs rounded border border-blue-500/40 text-blue-300">View/Edit</button>
+                        <button type="button" onclick="deleteRule({{.Rule.ID}})" class="px-2 py-1 text-xs rounded border border-red-500/40 text-red-300">Delete</button>
                     </div>
                 </div>
             </article>
@@ -415,11 +415,11 @@
                     {{if .Rule.EndpointID}}<input type="hidden" name="endpoint_id" value="{{.Rule.EndpointID}}">{{end}}
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div class="md:col-span-2">
-                            <label class="block text-sm text-gray-400 mb-1">Nombre</label>
+                            <label class="block text-sm text-gray-400 mb-1">Name</label>
                             <input type="text" name="name" value="{{.Rule.Name}}" required minlength="3" maxlength="100" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-400 mb-1">Metodo</label>
+                            <label class="block text-sm text-gray-400 mb-1">Method</label>
                             <select name="method" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                                 <option value="" {{if or (eq .Rule.Method "") (eq .Rule.Method "ANY") (eq .Rule.Method "*")}}selected{{end}}>ANY</option>
                                 <option value="GET" {{if eq .Rule.Method "GET"}}selected{{end}}>GET</option>
@@ -430,13 +430,13 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-400 mb-1">Prioridad</label>
+                            <label class="block text-sm text-gray-400 mb-1">Priority</label>
                             <input type="number" name="priority" value="{{.Rule.Priority}}" min="1" max="10000" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                         </div>
                     </div>
 
                     <details class="rounded border border-gray-700 bg-gray-900/40 p-4" open>
-                        <summary class="cursor-pointer text-sm text-gray-300">Condiciones de match (opcional)</summary>
+                        <summary class="cursor-pointer text-sm text-gray-300">Match conditions (optional)</summary>
                         <div class="mt-3 space-y-3">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div>
@@ -506,7 +506,7 @@
                         <div class="flex items-end">
                             <label class="inline-flex items-center gap-2 text-sm text-gray-300">
                                 <input type="checkbox" name="is_active" {{if .Rule.IsActive}}checked{{end}} class="rounded border-gray-600 bg-gray-900">
-                                Activa
+                                Active
                             </label>
                         </div>
                     </div>
@@ -522,14 +522,14 @@
                         </div>
                     </div>
                     <div class="flex justify-end">
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium">Guardar cambios</button>
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium">Save changes</button>
                     </div>
                 </form>
             </template>
             {{end}}
         </div>
         {{else}}
-        <p class="text-sm text-gray-500">No hay reglas especificas por endpoint.</p>
+        <p class="text-sm text-gray-500">No endpoint-specific rules.</p>
         {{end}}
     </section>
 </div>
@@ -537,8 +537,8 @@
 <div id="edit-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
     <div class="w-full max-w-3xl rounded-xl border border-gray-700 bg-gray-900 shadow-2xl">
         <div class="flex items-center justify-between px-5 py-3 border-b border-gray-800">
-            <h4 id="edit-modal-title" class="text-sm font-semibold text-gray-100">Editar Mock Rule</h4>
-            <button type="button" onclick="closeEditModal()" class="text-gray-400 hover:text-gray-200" aria-label="Cerrar modal">&times;</button>
+            <h4 id="edit-modal-title" class="text-sm font-semibold text-gray-100">Edit Mock Rule</h4>
+            <button type="button" onclick="closeEditModal()" class="text-gray-400 hover:text-gray-200" aria-label="Close modal">&times;</button>
         </div>
         <div id="edit-modal-body" class="p-5 max-h-[80vh] overflow-y-auto"></div>
     </div>
@@ -551,11 +551,11 @@ function apiFetch(url, options) {
 }
 
 async function deleteRule(mockId) {
-    const proceed = await window.appConfirm('Eliminar esta mock rule?', 'Eliminar regla');
+    const proceed = await window.appConfirm('Delete this mock rule?', 'Delete rule');
     if (!proceed) return;
     const res = await apiFetch('/mocks/' + mockId, { method: 'DELETE' });
     if (!res.ok) {
-        await window.appAlert('No se pudo eliminar la regla.', 'Error');
+        await window.appAlert('Could not delete the rule.', 'Error');
         return;
     }
     window.location.reload();
@@ -564,7 +564,7 @@ async function deleteRule(mockId) {
 async function toggleRule(mockId) {
     const res = await apiFetch('/mocks/' + mockId + '/toggle', { method: 'POST' });
     if (!res.ok) {
-        await window.appAlert('No se pudo cambiar el estado de la regla.', 'Error');
+        await window.appAlert('Could not change rule status.', 'Error');
         return;
     }
     window.location.reload();
@@ -583,17 +583,17 @@ function validateJSONField(field, opts) {
     try {
         parsed = JSON.parse(raw);
     } catch (_) {
-        return { ok: false, message: opts.invalidJSONMessage || 'JSON invalido.', field: field };
+        return { ok: false, message: opts.invalidJSONMessage || 'Invalid JSON.', field: field };
     }
 
     if (opts.requireObject && !isPlainObject(parsed)) {
-        return { ok: false, message: opts.invalidObjectMessage || 'Debe ser un objeto JSON.', field: field };
+        return { ok: false, message: opts.invalidObjectMessage || 'Must be a JSON object.', field: field };
     }
 
     if (opts.requireStringValues && isPlainObject(parsed)) {
         const invalid = Object.values(parsed).some(function(v) { return typeof v !== 'string'; });
         if (invalid) {
-            return { ok: false, message: opts.invalidStringValuesMessage || 'Todos los valores deben ser texto.', field: field };
+            return { ok: false, message: opts.invalidStringValuesMessage || 'All values must be text.', field: field };
         }
     }
 
@@ -607,7 +607,7 @@ function validateRegexField(field, message) {
     try {
         new RegExp(raw);
     } catch (_) {
-        return { ok: false, message: message || 'Regex invalido.', field: field };
+        return { ok: false, message: message || 'Invalid regex.', field: field };
     }
     return { ok: true };
 }
@@ -632,15 +632,15 @@ function validateMockForm(form) {
     const bodyMode = bodyModeField ? String(bodyModeField.value || '').trim().toLowerCase() : 'any';
 
     if (pathMode === 'regex') {
-        const regexCheck = validateRegexField(pathValueField, 'path_value debe ser un regex valido cuando path_mode=regex');
+        const regexCheck = validateRegexField(pathValueField, 'path_value must be a valid regex when path_mode=regex');
         if (!regexCheck.ok) return regexCheck;
     }
 
     if (queryMode !== 'any') {
         const queryCheck = validateJSONField(queryJSONField, {
-            invalidJSONMessage: 'query_json debe ser un JSON valido de tipo objeto.',
-            invalidObjectMessage: 'query_json debe ser un objeto JSON.',
-            invalidStringValuesMessage: 'query_json debe contener solo valores de texto.',
+            invalidJSONMessage: 'query_json must be a valid object JSON.',
+            invalidObjectMessage: 'query_json must be a JSON object.',
+            invalidStringValuesMessage: 'query_json must contain only string values.',
             requireObject: true,
             requireStringValues: true
         });
@@ -649,9 +649,9 @@ function validateMockForm(form) {
 
     if (headersMode !== 'any') {
         const headersCheck = validateJSONField(headersJSONField, {
-            invalidJSONMessage: 'headers_json debe ser un JSON valido de tipo objeto.',
-            invalidObjectMessage: 'headers_json debe ser un objeto JSON.',
-            invalidStringValuesMessage: 'headers_json debe contener solo valores de texto.',
+            invalidJSONMessage: 'headers_json must be a valid object JSON.',
+            invalidObjectMessage: 'headers_json must be a JSON object.',
+            invalidStringValuesMessage: 'headers_json must contain only string values.',
             requireObject: true,
             requireStringValues: true
         });
@@ -659,14 +659,14 @@ function validateMockForm(form) {
     }
 
     if (bodyMode === 'regex') {
-        const bodyRegexCheck = validateRegexField(bodyPatternField, 'body_pattern debe ser un regex valido cuando body_mode=regex');
+        const bodyRegexCheck = validateRegexField(bodyPatternField, 'body_pattern must be a valid regex when body_mode=regex');
         if (!bodyRegexCheck.ok) return bodyRegexCheck;
     }
 
     if (bodyMode === 'json') {
         const bodyJSONCheck = validateJSONField(bodyPatternField, {
-            invalidJSONMessage: 'body_pattern debe ser un JSON valido cuando body_mode=json',
-            invalidObjectMessage: 'body_pattern debe ser un objeto JSON cuando body_mode=json',
+            invalidJSONMessage: 'body_pattern must be valid JSON when body_mode=json',
+            invalidObjectMessage: 'body_pattern must be a JSON object when body_mode=json',
             requireObject: true,
             requireStringValues: false
         });
@@ -674,15 +674,15 @@ function validateMockForm(form) {
     }
 
     const responseHeadersCheck = validateJSONField(responseHeadersField, {
-        invalidJSONMessage: 'response_headers debe ser un JSON valido.',
-        invalidObjectMessage: 'response_headers debe ser un objeto JSON.',
+        invalidJSONMessage: 'response_headers must be valid JSON.',
+        invalidObjectMessage: 'response_headers must be a JSON object.',
         requireObject: true,
         requireStringValues: false
     });
     if (!responseHeadersCheck.ok) return responseHeadersCheck;
 
     const responseBodyCheck = validateJSONField(responseBodyField, {
-        invalidJSONMessage: 'response_body debe ser un JSON valido.',
+        invalidJSONMessage: 'response_body must be valid JSON.',
         requireObject: false,
         requireStringValues: false
     });
@@ -713,7 +713,7 @@ function openEditModal(templateId) {
             if (validation.ok) return;
 
             event.preventDefault();
-            await window.appAlert(validation.message || 'Formulario invalido.', 'Validacion');
+            await window.appAlert(validation.message || 'Invalid form.', 'Validation');
             if (validation.field) {
                 if (window.jsonEditorTools && typeof window.jsonEditorTools.focusField === 'function') {
                     window.jsonEditorTools.focusField(validation.field);
@@ -795,17 +795,17 @@ function initCustomMultiSelect(root, options) {
             .filter(item => selected.has(item.getAttribute('data-ms-value-item') || ''))
             .map(item => item.getAttribute('data-ms-label') || '')
             .filter(Boolean);
-        if (count) count.textContent = labels.length + ' seleccionados';
+        if (count) count.textContent = labels.length + ' selected';
         if (!value) return;
         if (labels.length === 0) {
-            value.textContent = (options && options.emptyLabel) || 'Selecciona opciones';
+            value.textContent = (options && options.emptyLabel) || 'Select options';
             return;
         }
         if (labels.length <= 2) {
             value.textContent = labels.join(', ');
             return;
         }
-        value.textContent = labels.slice(0, 2).join(', ') + ' +' + (labels.length - 2) + ' mas';
+        value.textContent = labels.slice(0, 2).join(', ') + ' +' + (labels.length - 2) + ' more';
     }
 
     function renderStates() {
@@ -925,7 +925,7 @@ function initCustomMultiSelects(scopeRoot) {
     const endpointOptions = Array.from(document.querySelectorAll('[data-endpoint-option]'));
     const endpointItems = Array.from(document.querySelectorAll('[data-endpoint-item]'));
     const selectedEndpointSet = new Set();
-    const globalExcludedMulti = globalExcludedRoot ? initCustomMultiSelect(globalExcludedRoot, { inputName: 'excluded_endpoint_ids', emptyLabel: 'Selecciona endpoints a excluir' }) : null;
+    const globalExcludedMulti = globalExcludedRoot ? initCustomMultiSelect(globalExcludedRoot, { inputName: 'excluded_endpoint_ids', emptyLabel: 'Select endpoints to exclude' }) : null;
 
     endpointItems.forEach(function(item) {
         item.setAttribute('role', 'option');
@@ -960,20 +960,20 @@ function initCustomMultiSelects(scopeRoot) {
 
         const count = selectedLabels.length;
         if (endpointCount) {
-            endpointCount.textContent = count + ' seleccionados';
+            endpointCount.textContent = count + ' selected';
         }
         if (!endpointValue) {
             return;
         }
         if (count === 0) {
-            endpointValue.textContent = 'Selecciona uno o varios endpoints';
+            endpointValue.textContent = 'Select one or more endpoints';
             return;
         }
         if (count <= 2) {
             endpointValue.textContent = selectedLabels.join(', ');
             return;
         }
-        endpointValue.textContent = selectedLabels.slice(0, 2).join(', ') + ' +' + (count - 2) + ' mas';
+        endpointValue.textContent = selectedLabels.slice(0, 2).join(', ') + ' +' + (count - 2) + ' more';
     }
 
     function renderHiddenInputs() {
@@ -1106,7 +1106,7 @@ function initCustomMultiSelects(scopeRoot) {
             const validation = validateMockForm(createForm);
             if (!validation.ok) {
                 event.preventDefault();
-                await window.appAlert(validation.message || 'Formulario invalido.', 'Validacion');
+                await window.appAlert(validation.message || 'Invalid form.', 'Validation');
                 if (validation.field) {
                     if (window.jsonEditorTools && typeof window.jsonEditorTools.focusField === 'function') {
                         window.jsonEditorTools.focusField(validation.field);
@@ -1121,7 +1121,7 @@ function initCustomMultiSelects(scopeRoot) {
                 const hasSelection = selectedEndpointValues().length > 0;
                 if (!hasSelection) {
                     event.preventDefault();
-                    await window.appAlert('Selecciona al menos un endpoint.', 'Validacion');
+                    await window.appAlert('Select at least one endpoint.', 'Validation');
                     if (endpointTrigger) {
                         endpointTrigger.focus();
                     }

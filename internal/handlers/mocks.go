@@ -94,18 +94,13 @@ func MockRulesPage(c *gin.Context) {
 		"globalRules":     globalRules,
 		"endpointRules":   endpointRules,
 	}
-	if token, ok := c.Get("csrfToken"); ok {
-		if tokenStr, ok := token.(string); ok {
-			data["csrfToken"] = tokenStr
-		}
-	}
 	if errMsg := strings.TrimSpace(c.Query("error")); errMsg != "" {
 		data["error"] = errMsg
 	}
 	if successMsg := strings.TrimSpace(c.Query("success")); successMsg != "" {
 		data["success"] = successMsg
 	}
-	c.HTML(http.StatusOK, "mocks.html", data)
+	c.HTML(http.StatusOK, "mocks.html", withViewData(c, data))
 }
 
 func parseExcludedEndpointSet(raw string) map[uint]bool {
@@ -196,7 +191,7 @@ func CreateManagedMockRule(c *gin.Context) {
 			c.JSON(http.StatusCreated, gin.H{"status": "created", "id": rule.ID, "created_count": 1})
 			return
 		}
-		c.Redirect(http.StatusSeeOther, "/mocks?success="+url.QueryEscape("Regla creada correctamente"))
+		c.Redirect(http.StatusSeeOther, "/mocks?success="+url.QueryEscape("Rule created successfully"))
 		return
 	}
 
@@ -209,7 +204,7 @@ func CreateManagedMockRule(c *gin.Context) {
 		endpointIDs = append(endpointIDs, *input.EndpointID)
 	}
 	if len(endpointIDs) == 0 {
-		renderMockInputErrorInMocksPage(c, "selecciona al menos un endpoint para reglas scope=endpoint")
+		renderMockInputErrorInMocksPage(c, "select at least one endpoint for scope=endpoint rules")
 		return
 	}
 
@@ -237,9 +232,9 @@ func CreateManagedMockRule(c *gin.Context) {
 		c.JSON(http.StatusCreated, gin.H{"status": "created", "ids": createdIDs, "created_count": len(createdIDs)})
 		return
 	}
-	msg := "Reglas creadas correctamente"
+	msg := "Rules created successfully"
 	if len(createdIDs) == 1 {
-		msg = "Regla creada correctamente"
+		msg = "Rule created successfully"
 	}
 	c.Redirect(http.StatusSeeOther, "/mocks?success="+url.QueryEscape(msg))
 }
@@ -319,7 +314,7 @@ func UpdateManagedMockRule(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "updated", "id": rule.ID})
 		return
 	}
-	c.Redirect(http.StatusSeeOther, "/mocks?success="+url.QueryEscape("Regla actualizada correctamente"))
+	c.Redirect(http.StatusSeeOther, "/mocks?success="+url.QueryEscape("Rule updated successfully"))
 }
 
 func DeleteMockRule(c *gin.Context) {
@@ -446,7 +441,7 @@ func parseMockRuleInput(c *gin.Context) (mockRuleInput, error) {
 	if len(excludedEndpointIDs) > 0 {
 		raw, marshalErr := json.Marshal(excludedEndpointIDs)
 		if marshalErr != nil {
-			return in, &parseError{msg: "excluded_endpoint_ids no se pudo procesar"}
+			return in, &parseError{msg: "excluded_endpoint_ids could not be processed"}
 		}
 		in.ExcludedEndpointIDs = string(raw)
 	}
@@ -551,7 +546,7 @@ func parseManagedEndpointIDs(c *gin.Context) ([]uint, error) {
 		}
 		parsed, err := strconv.ParseUint(trimmed, 10, 64)
 		if err != nil {
-			return nil, &parseError{msg: "endpoint_ids contiene un ID inválido"}
+			return nil, &parseError{msg: "endpoint_ids contains an invalid ID"}
 		}
 		id := uint(parsed)
 		if _, ok := seen[id]; ok {
@@ -577,7 +572,7 @@ func parseManagedExcludedEndpointIDs(c *gin.Context) ([]uint, error) {
 		}
 		parsed, err := strconv.ParseUint(trimmed, 10, 64)
 		if err != nil {
-			return nil, &parseError{msg: "excluded_endpoint_ids contiene un ID inválido"}
+			return nil, &parseError{msg: "excluded_endpoint_ids contains an invalid ID"}
 		}
 		id := uint(parsed)
 		if _, ok := seen[id]; ok {
@@ -602,7 +597,7 @@ func validateExcludedEndpoints(scope string, raw string) error {
 	}
 	var ids []uint
 	if err := json.Unmarshal([]byte(trimmed), &ids); err != nil {
-		return &parseError{msg: "excluded_endpoint_ids debe ser un arreglo JSON de IDs"}
+		return &parseError{msg: "excluded_endpoint_ids must be a JSON array of IDs"}
 	}
 	if len(ids) == 0 {
 		return nil
@@ -610,10 +605,10 @@ func validateExcludedEndpoints(scope string, raw string) error {
 
 	var count int64
 	if err := storage.DB.Model(&models.Endpoint{}).Where("id IN ?", ids).Count(&count).Error; err != nil {
-		return &parseError{msg: "no se pudieron validar los excluded_endpoint_ids"}
+		return &parseError{msg: "excluded_endpoint_ids validation failed"}
 	}
 	if count != int64(len(ids)) {
-		return &parseError{msg: "excluded_endpoint_ids contiene endpoints inexistentes"}
+		return &parseError{msg: "excluded_endpoint_ids contains endpoints that do not exist"}
 	}
 	return nil
 }

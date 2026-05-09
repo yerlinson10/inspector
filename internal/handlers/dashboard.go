@@ -73,14 +73,14 @@ func Dashboard(c *gin.Context) {
 		latestRequestID = recentRequests[0].ID
 	}
 
-	c.HTML(http.StatusOK, "dashboard.html", gin.H{
+	c.HTML(http.StatusOK, "dashboard.html", withViewData(c, gin.H{
 		"ContentTemplate": "dashboard_content",
 		"endpoints":       stats,
 		"recentRequests":  recentRequests,
 		"latestRequestID": latestRequestID,
 		"publicWSBaseURL": requestWSBaseURL(c),
 		"title":           "Dashboard",
-	})
+	}))
 }
 
 func ListRequests(c *gin.Context) {
@@ -156,7 +156,7 @@ func ListRequests(c *gin.Context) {
 		totalPages++
 	}
 
-	c.HTML(http.StatusOK, "requests.html", gin.H{
+	c.HTML(http.StatusOK, "requests.html", withViewData(c, gin.H{
 		"ContentTemplate": "requests_content",
 		"requests":        requests,
 		"endpoints":       endpoints,
@@ -173,7 +173,7 @@ func ListRequests(c *gin.Context) {
 		"total":           total,
 		"latestRequestID": latestRequestID,
 		"title":           "Requests",
-	})
+	}))
 }
 
 func RequestDetail(c *gin.Context) {
@@ -196,7 +196,7 @@ func RequestDetail(c *gin.Context) {
 		suggestedCompareID = suggested.ID
 	}
 
-	c.HTML(http.StatusOK, "request_detail.html", gin.H{
+	c.HTML(http.StatusOK, "request_detail.html", withViewData(c, gin.H{
 		"ContentTemplate":    "request_detail_content",
 		"request":            viewReq,
 		"requestRawHeaders":  req.Headers,
@@ -204,5 +204,5 @@ func RequestDetail(c *gin.Context) {
 		"requestTarget":      req.Path + replayQuerySuffix(req.QueryParams),
 		"suggestedCompareID": suggestedCompareID,
 		"title":              "Request #" + id,
-	})
+	}))
 }

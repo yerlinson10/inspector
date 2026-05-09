@@ -1,35 +1,35 @@
 {{define "content"}}
-<h2 class="text-2xl font-bold mb-6">WebSocket Client</h2>
+<h2 class="text-2xl font-bold mb-6">{{call .t "ws_client.title"}}</h2>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Connection -->
     <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
         <div class="space-y-4">
             <div>
-                <label class="block text-sm text-gray-400 mb-1">WebSocket URL</label>
+                <label class="block text-sm text-gray-400 mb-1">{{call .t "ws_client.label.url"}}</label>
                 <input type="text" id="ws-url" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="ws://example.com/ws">
             </div>
             <div class="flex gap-2">
-                <button onclick="connectWS()" id="btn-connect" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded font-medium transition">Connect</button>
-                <button onclick="disconnectWS()" id="btn-disconnect" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-medium transition hidden">Disconnect</button>
-                <span id="ws-status" class="flex items-center px-3 text-sm text-gray-400">Disconnected</span>
+                <button onclick="connectWS()" id="btn-connect" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded font-medium transition">{{call .t "ws_client.action.connect"}}</button>
+                <button onclick="disconnectWS()" id="btn-disconnect" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-medium transition hidden">{{call .t "ws_client.action.disconnect"}}</button>
+                <span id="ws-status" class="flex items-center px-3 text-sm text-gray-400">{{call .t "ws_client.status.disconnected"}}</span>
             </div>
             <div>
-                <label class="block text-sm text-gray-400 mb-1">Message</label>
+                <label class="block text-sm text-gray-400 mb-1">{{call .t "ws_client.label.message"}}</label>
                 <textarea id="ws-message" rows="4" data-json-editor data-json-key="ws_message" data-json-allow-empty="false" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none font-mono text-sm" placeholder='{"action": "ping"}'></textarea>
             </div>
-            <button onclick="sendMessage()" id="btn-send" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-medium transition w-full" disabled>Send Message</button>
+            <button onclick="sendMessage()" id="btn-send" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-medium transition w-full" disabled>{{call .t "ws_client.action.send"}}</button>
         </div>
     </div>
 
     <!-- Messages -->
     <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold">Messages</h3>
-            <button onclick="clearMessages()" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">Clear</button>
+            <h3 class="text-lg font-semibold">{{call .t "ws_client.messages.title"}}</h3>
+            <button onclick="clearMessages()" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">{{call .t "ws_client.messages.clear"}}</button>
         </div>
         <div id="ws-messages" class="space-y-2 max-h-[500px] overflow-y-auto font-mono text-sm">
-            <p class="text-gray-500">Connect to a WebSocket server to start.</p>
+            <p class="text-gray-500">{{call .t "ws_client.messages.empty"}}</p>
         </div>
     </div>
 </div>
@@ -52,6 +52,36 @@ const wsConnectButton = document.getElementById('btn-connect');
 const wsDisconnectButton = document.getElementById('btn-disconnect');
 const wsMessageField = document.getElementById('ws-message');
 const wsSendButton = document.getElementById('btn-send');
+
+const wsI18n = {
+    statusConnected: '{{call .t "ws_client.status.connected"}}',
+    statusConnecting: '{{call .t "ws_client.status.connecting"}}',
+    statusReconnecting: '{{call .t "ws_client.status.reconnecting"}}',
+    statusDisconnected: '{{call .t "ws_client.status.disconnected"}}',
+    statusError: '{{call .t "ws_client.status.error"}}',
+    reconnectInPrefix: '{{call .t "ws_client.reconnect.in_prefix"}}',
+    reconnectInSuffix: '{{call .t "ws_client.reconnect.in_suffix"}}',
+    lostRetryingPrefix: '{{call .t "ws_client.reconnect.lost_retrying_prefix"}}',
+    connectedToPrefix: '{{call .t "ws_client.system.connected_to"}}',
+    reconnectedToPrefix: '{{call .t "ws_client.system.reconnected_to"}}',
+    connectionClosed: '{{call .t "ws_client.system.connection_closed"}}',
+    missingURL: '{{call .t "ws_client.error.missing_url"}}',
+    missingURLTitle: '{{call .t "ws_client.error.missing_url_title"}}',
+    connectFailedPrefix: '{{call .t "ws_client.error.connect_failed_prefix"}}',
+    wsErrorOccurred: '{{call .t "ws_client.error.ws_error"}}',
+    sendFailedPrefix: '{{call .t "ws_client.error.send_failed_prefix"}}',
+    msgFieldUnavailable: '{{call .t "ws_client.validation.field_unavailable"}}',
+    msgEmpty: '{{call .t "ws_client.validation.message_empty"}}',
+    msgInvalidJSON: '{{call .t "ws_client.validation.message_invalid_json"}}',
+    msgInvalidShort: '{{call .t "ws_client.validation.message_invalid_short"}}',
+    validationTitle: '{{call .t "ws_client.validation.title"}}',
+    messagesCleared: '{{call .t "ws_client.messages.cleared"}}',
+    labelSent: '{{call .t "ws_client.stream.sent"}}',
+    labelReceived: '{{call .t "ws_client.stream.received"}}',
+    labelEcho: '{{call .t "ws_client.stream.echo"}}',
+    labelSystem: '{{call .t "ws_client.stream.system"}}',
+    labelError: '{{call .t "ws_client.stream.error"}}'
+};
 
 if (window.jsonEditorTools) {
     window.jsonEditorTools.init(document);
@@ -188,8 +218,8 @@ function scheduleReconnect(url) {
     const delayMs = Math.min(15000, 1000 * Math.pow(2, reconnectAttempts - 1));
     const seconds = Math.ceil(delayMs / 1000);
 
-    setStatus('Reconnecting in ' + seconds + 's...', 'connecting');
-    addMessage('system', 'Connection lost. Retrying in ' + seconds + 's...');
+    setStatus(wsI18n.reconnectInPrefix + seconds + wsI18n.reconnectInSuffix, 'connecting');
+    addMessage('system', wsI18n.lostRetryingPrefix + seconds + wsI18n.reconnectInSuffix);
 
     reconnectTimer = setTimeout(function() {
         reconnectTimer = null;
@@ -199,7 +229,7 @@ function scheduleReconnect(url) {
 
 function validateWSMessage(showAlert) {
     if (!wsMessageField) {
-        return { ok: false, message: 'Campo de mensaje no disponible.' };
+        return { ok: false, message: wsI18n.msgFieldUnavailable };
     }
 
     let result;
@@ -207,25 +237,25 @@ function validateWSMessage(showAlert) {
         result = window.jsonEditorTools.validateField(wsMessageField, {
             allowEmpty: false,
             requireObject: false,
-            emptyMessage: 'Message no puede estar vacio.',
-            invalidJSONMessage: 'Message debe ser un JSON valido.'
+            emptyMessage: wsI18n.msgEmpty,
+            invalidJSONMessage: wsI18n.msgInvalidJSON
         });
     } else {
         const raw = String(wsMessageField.value || '').trim();
         if (!raw) {
-            result = { ok: false, message: 'Message no puede estar vacio.' };
+            result = { ok: false, message: wsI18n.msgEmpty };
         } else {
             try {
                 JSON.parse(raw);
                 result = { ok: true };
             } catch (_) {
-                result = { ok: false, message: 'Message debe ser un JSON valido.' };
+                result = { ok: false, message: wsI18n.msgInvalidJSON };
             }
         }
     }
 
     if (showAlert && !result.ok) {
-        window.appAlert(result.message || 'Message invalido.', 'Validacion');
+        window.appAlert(result.message || wsI18n.msgInvalidShort, wsI18n.validationTitle);
         if (window.jsonEditorTools && typeof window.jsonEditorTools.focusField === 'function') {
             window.jsonEditorTools.focusField(wsMessageField);
         } else {
@@ -251,7 +281,7 @@ function connectWS(options) {
     const url = String(opts.url || (wsURLField ? wsURLField.value : '') || '').trim();
     if (!url) {
         if (!opts.silent) {
-            window.appAlert('Enter a WebSocket URL', 'Missing URL');
+            window.appAlert(wsI18n.missingURL, wsI18n.missingURLTitle);
         }
         return;
     }
@@ -265,7 +295,7 @@ function connectWS(options) {
     setShouldStayConnected(true);
     manualDisconnectRequested = false;
     clearReconnectTimer();
-    setStatus(opts.isReconnect ? 'Reconnecting...' : 'Connecting...', 'connecting');
+    setStatus(opts.isReconnect ? wsI18n.statusReconnecting : wsI18n.statusConnecting, 'connecting');
     setConnectedUI(false);
 
     // Connect through our proxy
@@ -274,8 +304,8 @@ function connectWS(options) {
     try {
         ws = new WebSocket(proxyUrl);
     } catch(e) {
-        addMessage('error', 'Failed to connect: ' + e.message);
-        setStatus('Connection error', 'error');
+        addMessage('error', wsI18n.connectFailedPrefix + e.message);
+        setStatus(wsI18n.statusError, 'error');
         if (shouldStayConnected) {
             scheduleReconnect(url);
         }
@@ -284,10 +314,10 @@ function connectWS(options) {
 
     ws.onopen = function() {
         reconnectAttempts = 0;
-        setStatus('Connected', 'connected');
+        setStatus(wsI18n.statusConnected, 'connected');
         setConnectedUI(true);
         syncSendButtonState();
-        addMessage('system', opts.isReconnect ? 'Reconnected to ' + url : 'Connected to ' + url);
+        addMessage('system', opts.isReconnect ? (wsI18n.reconnectedToPrefix + url) : (wsI18n.connectedToPrefix + url));
     };
 
     ws.onmessage = function(event) {
@@ -307,8 +337,8 @@ function connectWS(options) {
         syncSendButtonState();
 
         if (wasManual || !shouldStayConnected) {
-            setStatus('Disconnected', 'disconnected');
-            addMessage('system', 'Connection closed');
+            setStatus(wsI18n.statusDisconnected, 'disconnected');
+            addMessage('system', wsI18n.connectionClosed);
             return;
         }
 
@@ -316,8 +346,8 @@ function connectWS(options) {
     };
 
     ws.onerror = function() {
-        addMessage('error', 'WebSocket error occurred');
-        setStatus('Connection error', 'error');
+        addMessage('error', wsI18n.wsErrorOccurred);
+        setStatus(wsI18n.statusError, 'error');
     };
 }
 
@@ -331,7 +361,7 @@ function disconnectWS() {
         return;
     }
 
-    setStatus('Disconnected', 'disconnected');
+    setStatus(wsI18n.statusDisconnected, 'disconnected');
     setConnectedUI(false);
     syncSendButtonState();
 }
@@ -349,7 +379,7 @@ function sendMessage() {
     try {
         ws.send(msg);
     } catch (e) {
-        addMessage('error', 'Failed to send: ' + e.message);
+        addMessage('error', wsI18n.sendFailedPrefix + e.message);
         return;
     }
 
@@ -374,7 +404,13 @@ function addMessage(type, text) {
         system: 'text-gray-400 border-gray-700',
         error: 'text-red-300 border-red-800'
     };
-    const labels = { sent: '→ SENT', received: '← RECV', echo: '↺ ECHO', system: '● SYS', error: '✕ ERR' };
+    const labels = {
+        sent: wsI18n.labelSent,
+        received: wsI18n.labelReceived,
+        echo: wsI18n.labelEcho,
+        system: wsI18n.labelSystem,
+        error: wsI18n.labelError
+    };
 
     const div = document.createElement('div');
     div.className = `border-l-2 pl-3 py-1 ${colors[type]} fade-in`;
@@ -384,7 +420,7 @@ function addMessage(type, text) {
 }
 
 function clearMessages() {
-    document.getElementById('ws-messages').innerHTML = '<p class="text-gray-500">Messages cleared.</p>';
+    document.getElementById('ws-messages').innerHTML = '<p class="text-gray-500">' + wsI18n.messagesCleared + '</p>';
 }
 
 function escapeHtml(text) {
@@ -403,7 +439,7 @@ function restoreConnectionPreference() {
     if (shouldStayConnected && savedURL) {
         connectWS({ url: savedURL, isReconnect: true, silent: true });
     } else {
-        setStatus('Disconnected', 'disconnected');
+        setStatus(wsI18n.statusDisconnected, 'disconnected');
         setConnectedUI(false);
     }
 }

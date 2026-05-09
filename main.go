@@ -16,6 +16,7 @@ import (
 
 	"inspector/internal/config"
 	"inspector/internal/handlers"
+	"inspector/internal/i18n"
 	"inspector/internal/middleware"
 	"inspector/internal/storage"
 
@@ -37,6 +38,10 @@ func main() {
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	if err := i18n.Init(i18n.DefaultLanguage); err != nil {
+		log.Fatalf("Failed to initialize i18n: %v", err)
 	}
 
 	if isDefaultCredentials(cfg) {
@@ -76,6 +81,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	r.Use(middleware.SecurityHeaders())
+	r.Use(i18n.I18nMiddleware())
 
 	sessionTTL := time.Duration(cfg.Settings.SessionTTLHours) * time.Hour
 	authHandler := handlers.NewAuthHandler(cfg.Auth.Username, cfg.Auth.Password, sessionTTL)

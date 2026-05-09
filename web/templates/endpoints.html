@@ -8,8 +8,8 @@
 {{end}}
 
 <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
-    <h3 class="text-lg font-semibold mb-4">Create New Endpoint</h3>
-    <p class="text-sm text-gray-400 mb-4">Define un endpoint publico para recibir webhooks y personaliza la respuesta.</p>
+    <h3 class="text-lg font-semibold mb-4">{{call .t "endpoints.create.title"}}</h3>
+    <p class="text-sm text-gray-400 mb-4">{{call .t "endpoints.create.subtitle"}}</p>
 
     <form method="POST" action="/endpoints" class="space-y-4" id="create-endpoint-form" novalidate>
         <input type="hidden" name="csrf_token" value="{{.csrfToken}}">
@@ -17,12 +17,12 @@
             <div>
                 <label class="block text-sm text-gray-400 mb-1" for="endpoint-name">Name <span class="text-red-400">*</span></label>
                 <input type="text" id="endpoint-name" name="name" required minlength="3" maxlength="100" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="My Project Webhook">
-                <p class="text-xs text-gray-500 mt-1">Minimo 3 caracteres.</p>
+                <p class="text-xs text-gray-500 mt-1">{{call .t "endpoints.create.min_chars"}}</p>
             </div>
             <div>
                 <label class="block text-sm text-gray-400 mb-1" for="endpoint-slug">Slug (URL path) <span class="text-red-400">*</span></label>
                 <input type="text" id="endpoint-slug" name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="80" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none" placeholder="my-project" autocapitalize="off" spellcheck="false">
-                <p class="text-xs text-gray-500 mt-1">Solo minusculas, numeros y guiones.</p>
+                <p class="text-xs text-gray-500 mt-1">{{call .t "endpoints.create.slug_help"}}</p>
                 <p id="slug-preview" class="text-xs text-emerald-400/90 mt-1">URL: /in/my-project</p>
             </div>
         </div>
@@ -39,7 +39,7 @@
             </div>
             <div class="bg-gray-900/60 border border-gray-700 rounded p-3">
                 <p class="text-xs text-gray-400">Tip</p>
-                <p class="text-xs text-gray-500 mt-1">Los campos de headers y body deben ser JSON valido.</p>
+                <p class="text-xs text-gray-500 mt-1">{{call .t "endpoints.create.json_tip"}}</p>
             </div>
         </div>
 
@@ -61,9 +61,9 @@
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
             <button id="create-endpoint-submit" type="submit" class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-2 rounded font-medium transition inline-flex items-center justify-center gap-2 min-w-40">
                 <i data-lucide="plus" class="w-4 h-4"></i>
-                <span id="create-endpoint-submit-text">Create Endpoint</span>
+                <span id="create-endpoint-submit-text">{{call .t "endpoints.create.submit"}}</span>
             </button>
-            <p class="text-xs text-gray-500">Los campos marcados con <span class="text-red-400">*</span> son obligatorios.</p>
+            <p class="text-xs text-gray-500">{{call .t "endpoints.create.required_note"}} <span class="text-red-400">*</span> {{call .t "endpoints.create.required_note_suffix"}}</p>
         </div>
     </form>
 </div>
@@ -85,7 +85,7 @@
                         </span>
                         {{end}}
                     </div>
-                    <p class="text-sm text-gray-400">{{if .Description}}{{.Description}}{{else}}Sin descripcion{{end}}</p>
+                    <p class="text-sm text-gray-400">{{if .Description}}{{.Description}}{{else}}{{call $.t "endpoints.no_description"}}{{end}}</p>
                     <div class="flex flex-wrap items-center gap-2 text-xs">
                         <code class="bg-gray-900 px-2 py-1 rounded text-emerald-400">/in/{{.Slug}}</code>
                         <button type="button" onclick="copyToClipboard(window.location.origin + '/in/{{.Slug}}')" class="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">Copy URL</button>
@@ -136,11 +136,11 @@
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
                     <div>
                         <p class="text-sm text-blue-200 font-medium">Mock Rules por endpoint</p>
-                        <p class="text-xs text-blue-300/80">Crea reglas globales o especificas desde la pantalla centralizada.</p>
+                        <p class="text-xs text-blue-300/80">{{call $.t "endpoints.mock_rules.subtitle"}}</p>
                     </div>
                     <a href="/mocks" class="inline-flex items-center gap-2 text-xs px-3 py-2 rounded border border-blue-500/40 text-blue-200 hover:bg-blue-900/30">
                         <i data-lucide="settings-2" class="w-4 h-4"></i>
-                        Administrar Mock Rules
+                        {{call $.t "endpoints.mock_rules.manage"}}
                     </a>
                 </div>
 
@@ -152,13 +152,13 @@
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div>
                                 <p class="text-sm font-medium text-gray-100">{{$rule.Name}}</p>
-                                <p class="text-xs text-gray-400">#{{$rule.ID}} · Metodo {{if $rule.Method}}{{$rule.Method}}{{else}}ANY{{end}} · Priority {{$rule.Priority}}</p>
+                                <p class="text-xs text-gray-400">#{{$rule.ID}} · {{call $.t "endpoints.mock_rules.method"}} {{if $rule.Method}}{{$rule.Method}}{{else}}ANY{{end}} · Priority {{$rule.Priority}}</p>
                                 <p class="text-xs text-gray-500">Status {{$rule.ResponseStatus}} · Hits {{$rule.HitCount}}</p>
                             </div>
                             <div class="flex gap-2">
-                                <button type="button" onclick="toggleMockRule({{$ep.ID}}, {{$rule.ID}})" class="px-2 py-1 rounded border text-xs {{if $rule.IsActive}}border-emerald-500/50 text-emerald-300{{else}}border-gray-500/50 text-gray-300{{end}}">{{if $rule.IsActive}}Activa{{else}}Inactiva{{end}}</button>
-                                <button type="button" onclick="openMockEditModal('endpoint-rule-{{$ep.ID}}-{{$rule.ID}}')" class="px-2 py-1 rounded border border-blue-500/50 text-blue-300 text-xs">Editar</button>
-                                <button type="button" onclick="deleteMockRule({{$ep.ID}}, {{$rule.ID}})" class="px-2 py-1 rounded border border-red-500/50 text-red-300 text-xs">Eliminar</button>
+                                <button type="button" onclick="toggleMockRule({{$ep.ID}}, {{$rule.ID}})" class="px-2 py-1 rounded border text-xs {{if $rule.IsActive}}border-emerald-500/50 text-emerald-300{{else}}border-gray-500/50 text-gray-300{{end}}">{{if $rule.IsActive}}{{call $.t "endpoints.mock_rules.active"}}{{else}}{{call $.t "endpoints.mock_rules.inactive"}}{{end}}</button>
+                                <button type="button" onclick="openMockEditModal('endpoint-rule-{{$ep.ID}}-{{$rule.ID}}')" class="px-2 py-1 rounded border border-blue-500/50 text-blue-300 text-xs">{{call $.t "endpoints.mock_rules.edit"}}</button>
+                                <button type="button" onclick="deleteMockRule({{$ep.ID}}, {{$rule.ID}})" class="px-2 py-1 rounded border border-red-500/50 text-red-300 text-xs">{{call $.t "endpoints.mock_rules.delete"}}</button>
                             </div>
                         </div>
                     </article>
@@ -169,11 +169,11 @@
 
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div class="md:col-span-2">
-                                    <label class="block text-sm text-gray-400 mb-1">Nombre</label>
+                                    <label class="block text-sm text-gray-400 mb-1">{{call $.t "endpoints.mock_rules.field.name"}}</label>
                                     <input type="text" name="name" value="{{$rule.Name}}" required minlength="3" maxlength="100" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                                 </div>
                                 <div>
-                                    <label class="block text-sm text-gray-400 mb-1">Metodo</label>
+                                    <label class="block text-sm text-gray-400 mb-1">{{call $.t "endpoints.mock_rules.field.method"}}</label>
                                     <select name="method" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                                         <option value="" {{if or (eq $rule.Method "") (eq $rule.Method "ANY") (eq $rule.Method "*")}}selected{{end}}>ANY</option>
                                         <option value="GET" {{if eq $rule.Method "GET"}}selected{{end}}>GET</option>
@@ -184,13 +184,13 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-sm text-gray-400 mb-1">Prioridad</label>
+                                    <label class="block text-sm text-gray-400 mb-1">{{call $.t "endpoints.mock_rules.field.priority"}}</label>
                                     <input type="number" name="priority" value="{{$rule.Priority}}" min="1" max="10000" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:border-emerald-400 focus:outline-none">
                                 </div>
                             </div>
 
                             <details class="rounded border border-gray-700 bg-gray-900/40 p-4" open>
-                                <summary class="cursor-pointer text-sm text-gray-300">Condiciones de match (opcional)</summary>
+                                <summary class="cursor-pointer text-sm text-gray-300">{{call $.t "endpoints.mock_rules.match_conditions"}}</summary>
                                 <div class="mt-3 space-y-3">
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                                         <div>
@@ -260,7 +260,7 @@
                                 <div class="flex items-end">
                                     <label class="inline-flex items-center gap-2 text-sm text-gray-300">
                                         <input type="checkbox" name="is_active" {{if $rule.IsActive}}checked{{end}} class="rounded border-gray-600 bg-gray-900">
-                                        Activa
+                                        {{call $.t "endpoints.mock_rules.active"}}
                                     </label>
                                 </div>
                             </div>
@@ -277,14 +277,14 @@
                             </div>
 
                             <div class="flex justify-end">
-                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium transition">Guardar cambios</button>
+                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-medium transition">{{call $.t "endpoints.mock_rules.save_changes"}}</button>
                             </div>
                         </form>
                     </template>
                     {{end}}
                 </div>
                 {{else}}
-                <div class="rounded border border-dashed border-blue-800/40 p-4 text-center text-xs text-blue-400/60">No hay mock rules para este endpoint.</div>
+                <div class="rounded border border-dashed border-blue-800/40 p-4 text-center text-xs text-blue-400/60">{{call $.t "endpoints.mock_rules.empty"}}</div>
                 {{end}}
             </div>
         </article>
@@ -293,14 +293,14 @@
 </div>
 {{else}}
 <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center text-gray-400">
-    No endpoints creados todavia.
+    {{call .t "endpoints.empty"}}
 </div>
 {{end}}
 
 <div id="mock-edit-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
     <div class="w-full max-w-3xl rounded-xl border border-gray-700 bg-gray-900 shadow-2xl">
         <div class="flex items-center justify-between px-5 py-3 border-b border-gray-800">
-            <h4 class="text-sm font-semibold text-gray-100">Editar Mock Rule</h4>
+            <h4 class="text-sm font-semibold text-gray-100">{{call .t "endpoints.mock_rules.modal_title"}}</h4>
             <button type="button" onclick="closeMockEditModal()" class="text-gray-400 hover:text-gray-200">x</button>
         </div>
         <div id="mock-edit-modal-body" class="p-5 max-h-[80vh] overflow-y-auto"></div>
@@ -308,10 +308,39 @@
 </div>
 
 <script>
+const endpointI18n = {
+    copiedURL: '{{call .t "endpoints.alert.copied_url"}}',
+    copiedTitle: '{{call .t "endpoints.alert.copied_title"}}',
+    copyError: '{{call .t "endpoints.alert.copy_error"}}',
+    deleteEndpointConfirm: '{{call .t "endpoints.confirm.delete_endpoint"}}',
+    deleteEndpointTitle: '{{call .t "endpoints.confirm.delete_endpoint_title"}}',
+    deleteEndpointError: '{{call .t "endpoints.alert.delete_endpoint_error"}}',
+    clearLogsConfirm: '{{call .t "endpoints.confirm.clear_logs"}}',
+    clearLogsTitle: '{{call .t "endpoints.confirm.clear_logs_title"}}',
+    clearLogsError: '{{call .t "endpoints.alert.clear_logs_error"}}',
+    logsCleared: '{{call .t "endpoints.alert.logs_cleared"}}',
+    doneTitle: '{{call .t "endpoints.alert.done_title"}}',
+    deleteMockConfirm: '{{call .t "endpoints.confirm.delete_mock"}}',
+    deleteMockTitle: '{{call .t "endpoints.confirm.delete_mock_title"}}',
+    deleteMockError: '{{call .t "endpoints.alert.delete_mock_error"}}',
+    toggleMockError: '{{call .t "endpoints.alert.toggle_mock_error"}}',
+    jsonFieldEmpty: '{{call .t "endpoints.validation.json_field_empty"}}',
+    jsonObjectRequired: '{{call .t "endpoints.validation.json_object_required"}}',
+    jsonInvalid: '{{call .t "endpoints.validation.json_invalid"}}',
+    statusRange: '{{call .t "endpoints.validation.status_range"}}',
+    validationTitle: '{{call .t "endpoints.validation.title"}}',
+    responseHeadersEmpty: '{{call .t "endpoints.validation.response_headers_empty"}}',
+    responseHeadersInvalidJSON: '{{call .t "endpoints.validation.response_headers_invalid_json"}}',
+    responseHeadersInvalidObject: '{{call .t "endpoints.validation.response_headers_invalid_object"}}',
+    responseBodyEmpty: '{{call .t "endpoints.validation.response_body_empty"}}',
+    responseBodyInvalidJSON: '{{call .t "endpoints.validation.response_body_invalid_json"}}',
+    creating: '{{call .t "endpoints.create.creating"}}'
+};
+
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text)
-        .then(() => window.appAlert('URL copiada al portapapeles', 'Copiado'))
-        .catch(() => window.appAlert('No se pudo copiar la URL', 'Error'));
+        .then(() => window.appAlert(endpointI18n.copiedURL, endpointI18n.copiedTitle))
+        .catch(() => window.appAlert(endpointI18n.copyError, '{{call .t "common.error"}}'));
 }
 
 function apiFetch(url, options) {
@@ -320,12 +349,12 @@ function apiFetch(url, options) {
 }
 
 async function deleteEndpoint(id) {
-    const proceed = await window.appConfirm('Delete this endpoint and all its logs?', 'Delete Endpoint');
+    const proceed = await window.appConfirm(endpointI18n.deleteEndpointConfirm, endpointI18n.deleteEndpointTitle);
     if (!proceed) return;
 
     const res = await apiFetch('/endpoints/' + id, { method: 'DELETE' });
     if (!res.ok) {
-        await window.appAlert('No se pudo eliminar el endpoint.', 'Error');
+        await window.appAlert(endpointI18n.deleteEndpointError, '{{call .t "common.error"}}');
         return;
     }
 
@@ -334,25 +363,25 @@ async function deleteEndpoint(id) {
 }
 
 async function clearLogs(id) {
-    const proceed = await window.appConfirm('Clear all logs for this endpoint?', 'Clear Logs');
+    const proceed = await window.appConfirm(endpointI18n.clearLogsConfirm, endpointI18n.clearLogsTitle);
     if (!proceed) return;
 
     const res = await apiFetch('/endpoints/' + id + '/clear', { method: 'POST' });
     if (!res.ok) {
-        await window.appAlert('No se pudieron limpiar los logs.', 'Error');
+        await window.appAlert(endpointI18n.clearLogsError, '{{call .t "common.error"}}');
         return;
     }
 
-    await window.appAlert('Logs cleared', 'Done');
+    await window.appAlert(endpointI18n.logsCleared, endpointI18n.doneTitle);
 }
 
 async function deleteMockRule(endpointId, mockId) {
-    const proceed = await window.appConfirm('Delete this mock rule?', 'Delete Mock Rule');
+    const proceed = await window.appConfirm(endpointI18n.deleteMockConfirm, endpointI18n.deleteMockTitle);
     if (!proceed) return;
 
     const res = await apiFetch('/endpoints/' + endpointId + '/mocks/' + mockId, { method: 'DELETE' });
     if (!res.ok) {
-        await window.appAlert('No se pudo eliminar la regla mock.', 'Error');
+        await window.appAlert(endpointI18n.deleteMockError, '{{call .t "common.error"}}');
         return;
     }
 
@@ -362,7 +391,7 @@ async function deleteMockRule(endpointId, mockId) {
 async function toggleMockRule(endpointId, mockId) {
     const res = await apiFetch('/endpoints/' + endpointId + '/mocks/' + mockId + '/toggle', { method: 'POST' });
     if (!res.ok) {
-        await window.appAlert('No se pudo cambiar el estado de la regla mock.', 'Error');
+        await window.appAlert(endpointI18n.toggleMockError, '{{call .t "common.error"}}');
         return;
     }
     window.location.reload();
@@ -440,17 +469,17 @@ function closeMockEditModal() {
             if (allowEmpty) {
                 return { ok: true };
             }
-            return { ok: false, message: (options && options.emptyMessage) || 'Campo JSON vacio.' };
+            return { ok: false, message: (options && options.emptyMessage) || endpointI18n.jsonFieldEmpty };
         }
 
         try {
             const parsed = JSON.parse(raw);
             if (options && options.requireObject && (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed))) {
-                return { ok: false, message: options.invalidObjectMessage || 'Debe ser un objeto JSON.' };
+                return { ok: false, message: options.invalidObjectMessage || endpointI18n.jsonObjectRequired };
             }
             return { ok: true };
         } catch (_) {
-            return { ok: false, message: (options && options.invalidJSONMessage) || 'JSON invalido.' };
+            return { ok: false, message: (options && options.invalidJSONMessage) || endpointI18n.jsonInvalid };
         }
     }
 
@@ -470,7 +499,7 @@ function closeMockEditModal() {
             const status = Number(statusInput.value);
             if (!Number.isInteger(status) || status < 100 || status > 599) {
                 event.preventDefault();
-                await window.appAlert('Response status debe estar entre 100 y 599.', 'Validacion');
+                await window.appAlert(endpointI18n.statusRange, endpointI18n.validationTitle);
                 statusInput.focus();
                 return;
             }
@@ -478,13 +507,13 @@ function closeMockEditModal() {
             const headersValidation = validateJSONField(headersInput, {
                 allowEmpty: false,
                 requireObject: true,
-                emptyMessage: 'Response headers no puede estar vacio.',
-                invalidJSONMessage: 'Response headers debe ser JSON valido.',
-                invalidObjectMessage: 'Response headers debe ser un objeto JSON.'
+                emptyMessage: endpointI18n.responseHeadersEmpty,
+                invalidJSONMessage: endpointI18n.responseHeadersInvalidJSON,
+                invalidObjectMessage: endpointI18n.responseHeadersInvalidObject
             });
             if (!headersValidation.ok) {
                 event.preventDefault();
-                await window.appAlert(headersValidation.message || 'Response headers debe ser JSON valido.', 'Validacion');
+                await window.appAlert(headersValidation.message || endpointI18n.responseHeadersInvalidJSON, endpointI18n.validationTitle);
                 if (window.jsonEditorTools && typeof window.jsonEditorTools.focusField === 'function') {
                     window.jsonEditorTools.focusField(headersInput);
                 } else {
@@ -496,12 +525,12 @@ function closeMockEditModal() {
             const bodyValidation = validateJSONField(bodyInput, {
                 allowEmpty: false,
                 requireObject: false,
-                emptyMessage: 'Response body no puede estar vacio.',
-                invalidJSONMessage: 'Response body debe ser JSON valido.'
+                emptyMessage: endpointI18n.responseBodyEmpty,
+                invalidJSONMessage: endpointI18n.responseBodyInvalidJSON
             });
             if (!bodyValidation.ok) {
                 event.preventDefault();
-                await window.appAlert(bodyValidation.message || 'Response body debe ser JSON valido.', 'Validacion');
+                await window.appAlert(bodyValidation.message || endpointI18n.responseBodyInvalidJSON, endpointI18n.validationTitle);
                 if (window.jsonEditorTools && typeof window.jsonEditorTools.focusField === 'function') {
                     window.jsonEditorTools.focusField(bodyInput);
                 } else {
@@ -511,7 +540,7 @@ function closeMockEditModal() {
             }
 
             submitBtn.disabled = true;
-            submitText.textContent = 'Creating...';
+            submitText.textContent = endpointI18n.creating;
         });
     }
 })();

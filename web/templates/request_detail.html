@@ -1,13 +1,13 @@
 {{define "content"}}
 <div class="mb-6">
-    <a href="/requests" class="text-gray-400 hover:text-emerald-400">← Back to Requests</a>
+    <a href="/requests" class="text-gray-400 hover:text-emerald-400">← {{call .t "request_detail.back"}}</a>
 </div>
 
 {{with .request}}
 <div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
     <div class="flex justify-between items-start mb-6">
         <div>
-            <h2 class="text-2xl font-bold">Request #{{.ID}}</h2>
+            <h2 class="text-2xl font-bold">{{call $.t "request_detail.title"}} #{{.ID}}</h2>
             <div class="flex gap-3 mt-2">
                 <span class="px-2 py-0.5 rounded text-xs font-medium {{if eq .Type "websocket"}}bg-purple-900/50 text-purple-300{{else if eq .Type "webhook"}}bg-yellow-900/50 text-yellow-300{{else}}bg-blue-900/50 text-blue-300{{end}}">{{.Type}}</span>
                 <span class="font-mono text-gray-300">{{.Method}}</span>
@@ -15,28 +15,28 @@
             </div>
         </div>
         <div class="flex gap-2">
-            <button onclick="copyAsCurl()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i><span>Copy as cURL</span></button>
-            <a href="/send?replay={{.ID}}" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="rotate-cw" class="w-4 h-4"></i><span>Replay</span></a>
-            <a href="/requests/diff?left={{.ID}}{{if $.suggestedCompareID}}&right={{$.suggestedCompareID}}{{end}}&endpoint={{.EndpointSlug}}" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="git-compare-arrows" class="w-4 h-4"></i><span>Compare</span></a>
+            <button onclick="copyAsCurl()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i><span>{{call $.t "request_detail.action.copy_curl"}}</span></button>
+            <a href="/send?replay={{.ID}}" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="rotate-cw" class="w-4 h-4"></i><span>{{call $.t "request_detail.action.replay"}}</span></a>
+            <a href="/requests/diff?left={{.ID}}{{if $.suggestedCompareID}}&right={{$.suggestedCompareID}}{{end}}&endpoint={{.EndpointSlug}}" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm inline-flex items-center gap-1.5"><i data-lucide="git-compare-arrows" class="w-4 h-4"></i><span>{{call $.t "request_detail.action.compare"}}</span></a>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Meta -->
         <div>
-            <h3 class="text-lg font-semibold mb-2 text-gray-300">Meta</h3>
+            <h3 class="text-lg font-semibold mb-2 text-gray-300">{{call $.t "request_detail.meta.title"}}</h3>
             <dl class="space-y-2 text-sm">
-                <div class="flex justify-between"><dt class="text-gray-400">Path</dt><dd class="font-mono">{{.Path}}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-400">Remote IP</dt><dd class="font-mono">{{.RemoteAddr}}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-400">Size</dt><dd>{{.SizeBytes}} bytes</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-400">Time</dt><dd>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-400">{{call $.t "request_detail.meta.path"}}</dt><dd class="font-mono">{{.Path}}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-400">{{call $.t "request_detail.meta.remote_ip"}}</dt><dd class="font-mono">{{.RemoteAddr}}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-400">{{call $.t "request_detail.meta.size"}}</dt><dd>{{.SizeBytes}} {{call $.t "request_detail.meta.bytes"}}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-400">{{call $.t "request_detail.meta.time"}}</dt><dd>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</dd></div>
             </dl>
         </div>
 
         <!-- Query Params -->
         {{if .QueryParams}}
         <div>
-            <h3 class="text-lg font-semibold mb-2 text-gray-300">Query Parameters</h3>
+            <h3 class="text-lg font-semibold mb-2 text-gray-300">{{call $.t "request_detail.query_params"}}</h3>
             <pre class="bg-gray-900 rounded p-3 text-sm text-gray-300 overflow-x-auto" id="query-params">{{.QueryParams}}</pre>
         </div>
         {{end}}
@@ -44,14 +44,14 @@
 
     <!-- Headers -->
     <div class="mt-6">
-        <h3 class="text-lg font-semibold mb-2 text-gray-300">Headers</h3>
+        <h3 class="text-lg font-semibold mb-2 text-gray-300">{{call $.t "request_detail.headers"}}</h3>
         <textarea id="headers" rows="7" data-json-editor data-json-readonly="true" data-json-show-actions="false" data-json-editor-mode="auto" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 font-mono">{{.Headers}}</textarea>
     </div>
 
     <!-- Body -->
     {{if .Body}}
     <div class="mt-6">
-        <h3 class="text-lg font-semibold mb-2 text-gray-300">Body</h3>
+        <h3 class="text-lg font-semibold mb-2 text-gray-300">{{call $.t "request_detail.body"}}</h3>
         <textarea id="body" rows="12" data-json-editor data-json-readonly="true" data-json-show-actions="false" data-json-editor-mode="auto" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 font-mono">{{.Body}}</textarea>
     </div>
     {{end}}
@@ -59,6 +59,11 @@
 
 <script>
 function copyAsCurl() {
+    const tCopiedMsg = '{{call $.t "request_detail.copy.success"}}';
+    const tCopiedTitle = '{{call $.t "request_detail.copy.success_title"}}';
+    const tCopyErrorMsg = '{{call $.t "request_detail.copy.error"}}';
+    const tCopyErrorTitle = '{{call $.t "common.error"}}';
+
     const method = '{{.Method}}';
     const targetPath = '{{$.requestTarget}}';
     const body = "{{js $.requestRawBody}}";
@@ -77,8 +82,8 @@ function copyAsCurl() {
         curl += ` \\\n  -d '${body.replace(/'/g, "'\\''")}'`;
     }
     navigator.clipboard.writeText(curl)
-        .then(() => window.appAlert('Copied to clipboard!', 'Copied'))
-        .catch(() => window.appAlert('No se pudo copiar el comando.', 'Error'));
+        .then(() => window.appAlert(tCopiedMsg, tCopiedTitle))
+        .catch(() => window.appAlert(tCopyErrorMsg, tCopyErrorTitle));
 }
 </script>
 {{end}}

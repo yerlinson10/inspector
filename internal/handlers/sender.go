@@ -31,7 +31,7 @@ func SenderPage(c *gin.Context) {
 	if replayID := strings.TrimSpace(c.Query("replay")); replayID != "" {
 		var captured models.RequestLog
 		if err := storage.DB.First(&captured, replayID).Error; err != nil {
-			data["error"] = "Request para replay no encontrado"
+			data["error"] = "Replay source request not found"
 		} else {
 			method := strings.ToUpper(strings.TrimSpace(captured.Method))
 			if method == "" || method == "WS" {

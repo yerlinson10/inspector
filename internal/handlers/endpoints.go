@@ -251,15 +251,10 @@ func renderEndpointsPage(c *gin.Context, status int, endpoints []models.Endpoint
 		"title":           "Endpoints",
 		"publicWSBaseURL": requestWSBaseURL(c),
 	}
-	if token, ok := c.Get("csrfToken"); ok {
-		if tokenStr, ok := token.(string); ok {
-			data["csrfToken"] = tokenStr
-		}
-	}
 	if errMsg != "" {
 		data["error"] = errMsg
 	}
-	c.HTML(status, "endpoints.html", data)
+	c.HTML(status, "endpoints.html", withViewData(c, data))
 }
 
 func validateEndpointResponseConfig(responseHeaders, responseBody string) error {

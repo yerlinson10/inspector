@@ -3,111 +3,111 @@
     <header class="border-b border-slate-700/80 pb-6">
         <div class="flex items-center gap-2 text-emerald-300 mb-3">
             <i data-lucide="book-open-text" class="w-5 h-5"></i>
-            <span class="text-sm uppercase tracking-[0.18em]">Documentacion</span>
+            <span class="text-sm uppercase tracking-[0.18em]">Documentation</span>
         </div>
-        <h2 class="text-3xl font-bold tracking-tight">Como usar Inspector</h2>
+        <h2 class="text-3xl font-bold tracking-tight">How to use Inspector</h2>
         <p class="text-slate-300 mt-3 max-w-3xl">
-            Inspector te permite crear endpoints de prueba, inspeccionar peticiones entrantes en tiempo real y enviar
-            peticiones HTTP o WebSocket para pruebas de integracion.
+            Inspector lets you create test endpoints, inspect incoming requests in real time, and send
+            HTTP or WebSocket requests for integration testing.
         </p>
     </header>
 
     <section class="grid gap-4 md:grid-cols-2">
         <article class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
-            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2"><i data-lucide="rocket" class="w-5 h-5 text-emerald-300"></i><span>Inicio rapido</span></h3>
+            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2"><i data-lucide="rocket" class="w-5 h-5 text-emerald-300"></i><span>Quick Start</span></h3>
             <ol class="list-decimal list-inside space-y-2 text-slate-200">
-                <li>Inicia sesion con tus credenciales.</li>
-                <li>Ve a Endpoints y crea un endpoint con Name y Slug.</li>
-                <li>Copia la URL generada y enviale peticiones desde tu sistema.</li>
-                <li>Abre Requests para ver cada solicitud capturada.</li>
-                <li>En Dashboard revisa actividad reciente y estadisticas.</li>
+                <li>Sign in with your credentials.</li>
+                <li>Go to Endpoints and create an endpoint with Name and Slug.</li>
+                <li>Copy the generated URL and send requests from your system.</li>
+                <li>Open Requests to inspect each captured request.</li>
+                <li>Use Dashboard to review recent activity and statistics.</li>
             </ol>
         </article>
 
         <article class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
-            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2"><i data-lucide="send" class="w-5 h-5 text-sky-300"></i><span>Herramienta Sender</span></h3>
+            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2"><i data-lucide="send" class="w-5 h-5 text-sky-300"></i><span>Sender Tool</span></h3>
             <ul class="list-disc list-inside space-y-2 text-slate-200">
-                <li>Usa Sender para probar APIs HTTP sin salir de Inspector.</li>
-                <li>Headers y body se validan como JSON antes de enviar.</li>
-                <li>Cada campo JSON incluye acciones: Validar, Corregir y Ejemplo.</li>
-                <li>El historial queda guardado en History para reintentos.</li>
-                <li>WS Client sirve para conectarte y probar servicios WebSocket.</li>
+                <li>Use Sender to test HTTP APIs without leaving Inspector.</li>
+                <li>Headers and body are validated as JSON before sending.</li>
+                <li>Each JSON field includes actions: Validate, Fix, and Example.</li>
+                <li>History stores sent requests for retries.</li>
+                <li>WS Client helps you connect to and test WebSocket services.</li>
             </ul>
         </article>
     </section>
 
     <section class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
-        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2"><i data-lucide="terminal-square" class="w-5 h-5 text-amber-300"></i><span>Ejemplos utiles</span></h3>
+        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2"><i data-lucide="terminal-square" class="w-5 h-5 text-amber-300"></i><span>Useful Examples</span></h3>
         <div class="grid gap-4 lg:grid-cols-2">
             <div>
-                <p class="text-slate-300 mb-2">Enviar un webhook con curl:</p>
+                <p class="text-slate-300 mb-2">Send a webhook with curl:</p>
                 <pre class="bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 overflow-x-auto">curl -X POST "http://TU_HOST:PUERTO/in/mi-endpoint" \
   -H "Content-Type: application/json" \
   -d '{"event":"order.created","id":123}'</pre>
             </div>
             <div>
-                <p class="text-slate-300 mb-2">Conectar a un endpoint WebSocket:</p>
+                <p class="text-slate-300 mb-2">Connect to a WebSocket endpoint:</p>
                 <pre class="bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 overflow-x-auto">ws://TU_HOST:PUERTO/in/mi-endpoint/ws</pre>
             </div>
         </div>
     </section>
 
     <section class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
-        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2"><i data-lucide="shield-check" class="w-5 h-5 text-emerald-300"></i><span>Buenas practicas</span></h3>
+        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2"><i data-lucide="shield-check" class="w-5 h-5 text-emerald-300"></i><span>Best Practices</span></h3>
         <ul class="list-disc list-inside space-y-2 text-slate-200">
-            <li>Usa slugs descriptivos por entorno, por ejemplo pagos-staging.</li>
-            <li>Limpia logs desde Endpoints si quieres sesiones de prueba mas limpias.</li>
-            <li>No compartas credenciales de login en ambientes publicos.</li>
-            <li>Si usas HTTPS con certificados de desarrollo, verifica la configuracion TLS del destino.</li>
+            <li>Use descriptive slugs per environment, for example payments-staging.</li>
+            <li>Clear logs from Endpoints when you need cleaner test sessions.</li>
+            <li>Do not share login credentials in public environments.</li>
+            <li>If you use HTTPS with development certificates, verify TLS configuration on the target service.</li>
         </ul>
     </section>
 
     <section class="rounded-xl border border-blue-800/50 bg-blue-950/20 p-5 space-y-4">
-        <h3 class="text-xl font-semibold flex items-center gap-2"><i data-lucide="zap" class="w-5 h-5 text-blue-300"></i><span>Mock Rules — respuestas condicionales por endpoint</span></h3>
+        <h3 class="text-xl font-semibold flex items-center gap-2"><i data-lucide="zap" class="w-5 h-5 text-blue-300"></i><span>Mock Rules - conditional responses per endpoint</span></h3>
         <p class="text-slate-300 text-sm">
-            Las <strong class="text-blue-200">Mock Rules</strong> te permiten que un mismo endpoint responda de forma distinta
-            dependiendo del request recibido: metodo HTTP, path, query params, headers o body.
-            Es similar a Beeceptor o Mockoon. Cada endpoint puede tener varias reglas; gana la primera que coincide
-            (por prioridad ascendente). Si ninguna coincide, se usa la respuesta estatica del endpoint como fallback.
+            <strong class="text-blue-200">Mock Rules</strong> let the same endpoint return different responses
+            depending on the incoming request: HTTP method, path, query params, headers, or body.
+            Similar to Beeceptor or Mockoon, each endpoint can have multiple rules; the first matching rule wins
+            (ascending priority). If none matches, the endpoint static response is used as fallback.
         </p>
 
         <div class="grid gap-4 md:grid-cols-2">
             <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-2">
-                <h4 class="text-sm font-semibold text-blue-200 flex items-center gap-1"><i data-lucide="list-ordered" class="w-4 h-4"></i> Como crear una regla</h4>
+                <h4 class="text-sm font-semibold text-blue-200 flex items-center gap-1"><i data-lucide="list-ordered" class="w-4 h-4"></i> How to create a rule</h4>
                 <ol class="list-decimal list-inside space-y-1 text-slate-300 text-sm">
-                    <li>Ve a <strong>Endpoints</strong> y abre cualquier endpoint.</li>
-                    <li>Verás el panel <span class="text-blue-300 font-medium">Mock Rules</span> al final de la tarjeta.</li>
-                    <li>Completa el formulario "Nueva Mock Rule" y haz clic en <strong>Create Mock Rule</strong>.</li>
-                    <li>La regla aparece en la lista inmediatamente y está activa por defecto.</li>
-                    <li>Puedes editarla inline y guardar con <strong>Save Rule</strong>.</li>
+                    <li>Go to <strong>Endpoints</strong> and open any endpoint.</li>
+                    <li>You will see the <span class="text-blue-300 font-medium">Mock Rules</span> panel at the bottom of the card.</li>
+                    <li>Fill in the "New Mock Rule" form and click <strong>Create Mock Rule</strong>.</li>
+                    <li>The rule appears immediately in the list and is active by default.</li>
+                    <li>You can edit it inline and save with <strong>Save Rule</strong>.</li>
                 </ol>
             </div>
 
             <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-2">
-                <h4 class="text-sm font-semibold text-blue-200 flex items-center gap-1"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i> Campos clave</h4>
+                <h4 class="text-sm font-semibold text-blue-200 flex items-center gap-1"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i> Key fields</h4>
                 <ul class="space-y-1 text-sm text-slate-300">
-                    <li><span class="text-white font-medium">Priority</span> — número menor = se evalúa primero. Usa 1, 10, 100…</li>
-                    <li><span class="text-white font-medium">Method</span> — GET, POST, ANY (o vacío para cualquiera).</li>
+                    <li><span class="text-white font-medium">Priority</span> - lower number = evaluated first. Use 1, 10, 100...</li>
+                    <li><span class="text-white font-medium">Method</span> - GET, POST, ANY (or empty for any).</li>
                     <li><span class="text-white font-medium">Path mode</span> — any · exact · prefix · regex.</li>
-                    <li><span class="text-white font-medium">Body mode</span> — any · exact · contains · regex · json (subconjunto de campos).</li>
-                    <li><span class="text-white font-medium">Delay ms</span> — retraso antes de responder (útil para simular latencia).</li>
-                    <li><span class="text-white font-medium">Active</span> — toggle rápido sin borrar la regla.</li>
+                    <li><span class="text-white font-medium">Body mode</span> - any · exact · contains · regex · json (field subset matching).</li>
+                    <li><span class="text-white font-medium">Delay ms</span> - delay before responding (useful to simulate latency).</li>
+                    <li><span class="text-white font-medium">Active</span> - quick toggle without deleting the rule.</li>
                 </ul>
             </div>
         </div>
 
         <div class="grid gap-4 md:grid-cols-3">
             <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 space-y-1">
-                <p class="text-xs text-blue-300 font-semibold">Ejemplo: 200 para GET, 404 para el resto</p>
-                <p class="text-xs text-slate-400">Regla 1 (priority 1):</p>
+                <p class="text-xs text-blue-300 font-semibold">Example: 200 for GET, 404 for everything else</p>
+                <p class="text-xs text-slate-400">Rule 1 (priority 1):</p>
                 <pre class="text-xs text-slate-200 overflow-x-auto">Method: GET
 Path mode: any
 Response: 200 {"ok":true}</pre>
-                <p class="text-xs text-slate-400 mt-1">Fallback del endpoint:</p>
+                <p class="text-xs text-slate-400 mt-1">Endpoint fallback:</p>
                 <pre class="text-xs text-slate-200 overflow-x-auto">Response: 404 {"error":"not found"}</pre>
             </div>
             <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 space-y-1">
-                <p class="text-xs text-blue-300 font-semibold">Ejemplo: respuesta según body JSON</p>
+                <p class="text-xs text-blue-300 font-semibold">Example: response based on JSON body</p>
                 <pre class="text-xs text-slate-200 overflow-x-auto">Method: POST
 Body mode: json
 Body pattern:
@@ -116,7 +116,7 @@ Response: 201
   {"charged":true}</pre>
             </div>
             <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 space-y-1">
-                <p class="text-xs text-blue-300 font-semibold">Ejemplo: simular timeout</p>
+                <p class="text-xs text-blue-300 font-semibold">Example: simulate timeout</p>
                 <pre class="text-xs text-slate-200 overflow-x-auto">Method: ANY
 Path mode: any
 Delay ms: 5000
@@ -127,7 +127,7 @@ Response: 503
 
         <div class="rounded-lg border border-amber-800/40 bg-amber-950/20 p-3 text-sm text-amber-200 flex gap-2">
             <i data-lucide="triangle-alert" class="w-4 h-4 mt-0.5 shrink-0 text-amber-400"></i>
-            <span>El orden de evaluación es <strong>Priority ASC</strong>. Si dos reglas tienen la misma prioridad, gana la de menor ID (la más antigua). El fallback final es siempre la respuesta configurada en el endpoint.</span>
+            <span>The evaluation order is <strong>Priority ASC</strong>. If two rules share the same priority, the lower ID (older rule) wins. Final fallback is always the endpoint configured response.</span>
         </div>
     </section>
 </div>
