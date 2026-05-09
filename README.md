@@ -1,5 +1,9 @@
 # Inspector
 
+<img width="426"  alt="inspector" src="https://github.com/user-attachments/assets/1bb97051-126c-4731-b754-28d2efea4977" />
+
+<br>
+
 > Looking for Spanish documentation? Read README.es.md
 
 Inspector is a Go-based developer tool to inspect, debug, and send HTTP, webhook, and WebSocket traffic. It provides a real-time web dashboard where you can receive inbound requests, inspect headers and payloads, and send outbound requests with full history.
