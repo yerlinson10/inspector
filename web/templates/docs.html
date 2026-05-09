@@ -3,111 +3,107 @@
     <header class="border-b border-slate-700/80 pb-6">
         <div class="flex items-center gap-2 text-emerald-300 mb-3">
             <i data-lucide="book-open-text" class="w-5 h-5"></i>
-            <span class="text-sm uppercase tracking-[0.18em]">Documentation</span>
+            <span class="text-sm uppercase tracking-[0.18em]">{{call .t "docs.badge"}}</span>
         </div>
-        <h2 class="text-3xl font-bold tracking-tight">How to use Inspector</h2>
+        <h2 class="text-3xl font-bold tracking-tight">{{call .t "docs.title"}}</h2>
         <p class="text-slate-300 mt-3 max-w-3xl">
-            Inspector lets you create test endpoints, inspect incoming requests in real time, and send
-            HTTP or WebSocket requests for integration testing.
+            {{call .t "docs.subtitle"}}
         </p>
     </header>
 
     <section class="grid gap-4 md:grid-cols-2">
         <article class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
-            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2"><i data-lucide="rocket" class="w-5 h-5 text-emerald-300"></i><span>Quick Start</span></h3>
+            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2"><i data-lucide="rocket" class="w-5 h-5 text-emerald-300"></i><span>{{call .t "docs.quick_start.title"}}</span></h3>
             <ol class="list-decimal list-inside space-y-2 text-slate-200">
-                <li>Sign in with your credentials.</li>
-                <li>Go to Endpoints and create an endpoint with Name and Slug.</li>
-                <li>Copy the generated URL and send requests from your system.</li>
-                <li>Open Requests to inspect each captured request.</li>
-                <li>Use Dashboard to review recent activity and statistics.</li>
+                <li>{{call .t "docs.quick_start.item1"}}</li>
+                <li>{{call .t "docs.quick_start.item2"}}</li>
+                <li>{{call .t "docs.quick_start.item3"}}</li>
+                <li>{{call .t "docs.quick_start.item4"}}</li>
+                <li>{{call .t "docs.quick_start.item5"}}</li>
             </ol>
         </article>
 
         <article class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
-            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2"><i data-lucide="send" class="w-5 h-5 text-sky-300"></i><span>Sender Tool</span></h3>
+            <h3 class="text-xl font-semibold mb-2 flex items-center gap-2"><i data-lucide="send" class="w-5 h-5 text-sky-300"></i><span>{{call .t "docs.sender.title"}}</span></h3>
             <ul class="list-disc list-inside space-y-2 text-slate-200">
-                <li>Use Sender to test HTTP APIs without leaving Inspector.</li>
-                <li>Headers and body are validated as JSON before sending.</li>
-                <li>Each JSON field includes actions: Validate, Fix, and Example.</li>
-                <li>History stores sent requests for retries.</li>
-                <li>WS Client helps you connect to and test WebSocket services.</li>
+                <li>{{call .t "docs.sender.item1"}}</li>
+                <li>{{call .t "docs.sender.item2"}}</li>
+                <li>{{call .t "docs.sender.item3"}}</li>
+                <li>{{call .t "docs.sender.item4"}}</li>
+                <li>{{call .t "docs.sender.item5"}}</li>
             </ul>
         </article>
     </section>
 
     <section class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
-        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2"><i data-lucide="terminal-square" class="w-5 h-5 text-amber-300"></i><span>Useful Examples</span></h3>
+        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2"><i data-lucide="terminal-square" class="w-5 h-5 text-amber-300"></i><span>{{call .t "docs.examples.title"}}</span></h3>
         <div class="grid gap-4 lg:grid-cols-2">
             <div>
-                <p class="text-slate-300 mb-2">Send a webhook with curl:</p>
+                <p class="text-slate-300 mb-2">{{call .t "docs.examples.webhook"}}</p>
                 <pre class="bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 overflow-x-auto">curl -X POST "http://TU_HOST:PUERTO/in/mi-endpoint" \
   -H "Content-Type: application/json" \
   -d '{"event":"order.created","id":123}'</pre>
             </div>
             <div>
-                <p class="text-slate-300 mb-2">Connect to a WebSocket endpoint:</p>
+                <p class="text-slate-300 mb-2">{{call .t "docs.examples.ws"}}</p>
                 <pre class="bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 overflow-x-auto">ws://TU_HOST:PUERTO/in/mi-endpoint/ws</pre>
             </div>
         </div>
     </section>
 
     <section class="rounded-xl border border-slate-700 bg-slate-900/40 p-5">
-        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2"><i data-lucide="shield-check" class="w-5 h-5 text-emerald-300"></i><span>Best Practices</span></h3>
+        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2"><i data-lucide="shield-check" class="w-5 h-5 text-emerald-300"></i><span>{{call .t "docs.best_practices.title"}}</span></h3>
         <ul class="list-disc list-inside space-y-2 text-slate-200">
-            <li>Use descriptive slugs per environment, for example payments-staging.</li>
-            <li>Clear logs from Endpoints when you need cleaner test sessions.</li>
-            <li>Do not share login credentials in public environments.</li>
-            <li>If you use HTTPS with development certificates, verify TLS configuration on the target service.</li>
+            <li>{{call .t "docs.best_practices.item1"}}</li>
+            <li>{{call .t "docs.best_practices.item2"}}</li>
+            <li>{{call .t "docs.best_practices.item3"}}</li>
+            <li>{{call .t "docs.best_practices.item4"}}</li>
         </ul>
     </section>
 
     <section class="rounded-xl border border-blue-800/50 bg-blue-950/20 p-5 space-y-4">
-        <h3 class="text-xl font-semibold flex items-center gap-2"><i data-lucide="zap" class="w-5 h-5 text-blue-300"></i><span>Mock Rules - conditional responses per endpoint</span></h3>
+        <h3 class="text-xl font-semibold flex items-center gap-2"><i data-lucide="zap" class="w-5 h-5 text-blue-300"></i><span>{{call .t "docs.mock_rules.title"}}</span></h3>
         <p class="text-slate-300 text-sm">
-            <strong class="text-blue-200">Mock Rules</strong> let the same endpoint return different responses
-            depending on the incoming request: HTTP method, path, query params, headers, or body.
-            Similar to Beeceptor or Mockoon, each endpoint can have multiple rules; the first matching rule wins
-            (ascending priority). If none matches, the endpoint static response is used as fallback.
+            {{call .t "docs.mock_rules.description"}}
         </p>
 
         <div class="grid gap-4 md:grid-cols-2">
             <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-2">
-                <h4 class="text-sm font-semibold text-blue-200 flex items-center gap-1"><i data-lucide="list-ordered" class="w-4 h-4"></i> How to create a rule</h4>
+                <h4 class="text-sm font-semibold text-blue-200 flex items-center gap-1"><i data-lucide="list-ordered" class="w-4 h-4"></i> {{call .t "docs.mock_rules.create.title"}}</h4>
                 <ol class="list-decimal list-inside space-y-1 text-slate-300 text-sm">
-                    <li>Go to <strong>Endpoints</strong> and open any endpoint.</li>
-                    <li>You will see the <span class="text-blue-300 font-medium">Mock Rules</span> panel at the bottom of the card.</li>
-                    <li>Fill in the "New Mock Rule" form and click <strong>Create Mock Rule</strong>.</li>
-                    <li>The rule appears immediately in the list and is active by default.</li>
-                    <li>You can edit it inline and save with <strong>Save Rule</strong>.</li>
+                    <li>{{call .t "docs.mock_rules.create.item1"}}</li>
+                    <li>{{call .t "docs.mock_rules.create.item2"}}</li>
+                    <li>{{call .t "docs.mock_rules.create.item3"}}</li>
+                    <li>{{call .t "docs.mock_rules.create.item4"}}</li>
+                    <li>{{call .t "docs.mock_rules.create.item5"}}</li>
                 </ol>
             </div>
 
             <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-2">
-                <h4 class="text-sm font-semibold text-blue-200 flex items-center gap-1"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i> Key fields</h4>
+                <h4 class="text-sm font-semibold text-blue-200 flex items-center gap-1"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i> {{call .t "docs.mock_rules.fields.title"}}</h4>
                 <ul class="space-y-1 text-sm text-slate-300">
-                    <li><span class="text-white font-medium">Priority</span> - lower number = evaluated first. Use 1, 10, 100...</li>
-                    <li><span class="text-white font-medium">Method</span> - GET, POST, ANY (or empty for any).</li>
-                    <li><span class="text-white font-medium">Path mode</span> — any · exact · prefix · regex.</li>
-                    <li><span class="text-white font-medium">Body mode</span> - any · exact · contains · regex · json (field subset matching).</li>
-                    <li><span class="text-white font-medium">Delay ms</span> - delay before responding (useful to simulate latency).</li>
-                    <li><span class="text-white font-medium">Active</span> - quick toggle without deleting the rule.</li>
+                    <li>{{call .t "docs.mock_rules.fields.item1"}}</li>
+                    <li>{{call .t "docs.mock_rules.fields.item2"}}</li>
+                    <li>{{call .t "docs.mock_rules.fields.item3"}}</li>
+                    <li>{{call .t "docs.mock_rules.fields.item4"}}</li>
+                    <li>{{call .t "docs.mock_rules.fields.item5"}}</li>
+                    <li>{{call .t "docs.mock_rules.fields.item6"}}</li>
                 </ul>
             </div>
         </div>
 
         <div class="grid gap-4 md:grid-cols-3">
             <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 space-y-1">
-                <p class="text-xs text-blue-300 font-semibold">Example: 200 for GET, 404 for everything else</p>
-                <p class="text-xs text-slate-400">Rule 1 (priority 1):</p>
+                <p class="text-xs text-blue-300 font-semibold">{{call .t "docs.mock_rules.examples.ex1.title"}}</p>
+                <p class="text-xs text-slate-400">{{call .t "docs.mock_rules.examples.ex1.rule_label"}}</p>
                 <pre class="text-xs text-slate-200 overflow-x-auto">Method: GET
 Path mode: any
 Response: 200 {"ok":true}</pre>
-                <p class="text-xs text-slate-400 mt-1">Endpoint fallback:</p>
+                <p class="text-xs text-slate-400 mt-1">{{call .t "docs.mock_rules.examples.ex1.fallback_label"}}</p>
                 <pre class="text-xs text-slate-200 overflow-x-auto">Response: 404 {"error":"not found"}</pre>
             </div>
             <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 space-y-1">
-                <p class="text-xs text-blue-300 font-semibold">Example: response based on JSON body</p>
+                <p class="text-xs text-blue-300 font-semibold">{{call .t "docs.mock_rules.examples.ex2.title"}}</p>
                 <pre class="text-xs text-slate-200 overflow-x-auto">Method: POST
 Body mode: json
 Body pattern:
@@ -116,7 +112,7 @@ Response: 201
   {"charged":true}</pre>
             </div>
             <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 space-y-1">
-                <p class="text-xs text-blue-300 font-semibold">Example: simulate timeout</p>
+                <p class="text-xs text-blue-300 font-semibold">{{call .t "docs.mock_rules.examples.ex3.title"}}</p>
                 <pre class="text-xs text-slate-200 overflow-x-auto">Method: ANY
 Path mode: any
 Delay ms: 5000
@@ -127,7 +123,7 @@ Response: 503
 
         <div class="rounded-lg border border-amber-800/40 bg-amber-950/20 p-3 text-sm text-amber-200 flex gap-2">
             <i data-lucide="triangle-alert" class="w-4 h-4 mt-0.5 shrink-0 text-amber-400"></i>
-            <span>The evaluation order is <strong>Priority ASC</strong>. If two rules share the same priority, the lower ID (older rule) wins. Final fallback is always the endpoint configured response.</span>
+            <span>{{call .t "docs.mock_rules.warning"}}</span>
         </div>
     </section>
 </div>
