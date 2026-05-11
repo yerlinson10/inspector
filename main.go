@@ -88,6 +88,9 @@ func main() {
 
 	r.HTMLRender = buildRenderer()
 
+	// Configurar el servidor para servir archivos estáticos desde la carpeta /web/static
+	r.Static("/static", "./web/static")
+
 	// Public routes (no auth) - Receiver endpoints
 	public := r.Group("/in")
 	{
